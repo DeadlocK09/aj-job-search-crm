@@ -7,16 +7,20 @@
 function onOpen() {
 
   SpreadsheetApp.getUi()
-    .createMenu("🚀 AJ Job Search CRM")
-    .addItem("📊 Dashboard", "showDashboard")
-    .addSeparator()
+    .createMenu("🚀 CareerFlow")
     .addItem("➕ Add Application", "addApplication")
-    .addItem("📧 Scan Gmail", "scanGmail")
     .addSeparator()
-    .addItem("📈 Update Dashboard", "updateDashboard")
+    .addItem("🛠 Initialize Database", "initializeApplicationsSheet")
     .addSeparator()
-    .addItem("⚙ Settings", "showSettings")
-    .addItem("ℹ About", "showAbout")
+    .addItem("ℹ️ About", "showAbout")
     .addToUi();
+
+}
+
+function showAbout() {
+
+  SpreadsheetApp.getUi().alert(
+    "CareerFlow v1.0.0\n\nBuilt by AJ using Google Apps Script."
+  );
 
 }
