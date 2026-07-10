@@ -15,9 +15,13 @@ function showDashboard() {
 
 function addApplication() {
 
+  const html = HtmlService
+    .createHtmlOutputFromFile("AddApplication")
+    .setTitle("Add Application");
+
   SpreadsheetApp
     .getUi()
-    .alert("Coming Soon!\n\nApplication Form");
+    .showSidebar(html);
 
 }
 
@@ -42,15 +46,5 @@ function showSettings() {
   SpreadsheetApp
     .getUi()
     .alert("Coming Soon!\n\nSettings");
-
-}
-
-function showAbout() {
-
-  SpreadsheetApp
-    .getUi()
-    .alert(
-      "AJ Job Search CRM\n\nVersion 1.0\n\nBuilt with Google Apps Script"
-    );
 
 }

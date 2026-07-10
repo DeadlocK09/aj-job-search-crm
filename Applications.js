@@ -56,3 +56,46 @@ function initializeApplicationsSheet() {
   );
 
 }
+
+/**
+ * Saves a new job application.
+ *
+ * @param {Object} data Form data from the sidebar.
+ */
+function saveApplication(data) {
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(CONFIG.SHEETS.APPLICATIONS);
+
+  const lastRow = sheet.getLastRow();
+
+  const applicationId =
+    "APP-" + String(lastRow).padStart(6, "0");
+
+  sheet.appendRow([
+    applicationId,
+    new Date(),          // Date Applied
+    data.company,
+    data.position,
+    data.platform,
+    data.location,
+    data.workType,
+    data.salary,
+    CONFIG.STATUS.APPLIED,
+    "",                  // Recruiter
+    "",                  // Recruiter Email
+    data.jobUrl,
+    "",                  // Follow-up Date
+    data.resumeVersion,
+    data.coverLetter,
+    data.notes,
+    new Date()           // Last Updated
+  ]);
+
+  return {
+    success: true,
+    applicationId: applicationId
+  };
+
+}

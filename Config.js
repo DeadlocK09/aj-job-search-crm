@@ -25,6 +25,8 @@ const CONFIG = {
 
   },
 
+  ID_PREFIX: "APP",
+
   VERSION: "1.0.0"
 
 };

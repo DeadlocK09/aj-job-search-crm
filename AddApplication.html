@@ -1,9 +1,147 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <base target="_top">
-  </head>
-  <body>
-    
-  </body>
+<head>
+  <base target="_top">
+
+  <style>
+
+    body{
+      font-family:Arial,sans-serif;
+      padding:20px;
+    }
+
+    h2{
+      margin-top:0;
+    }
+
+    label{
+      display:block;
+      margin-top:12px;
+      font-weight:bold;
+    }
+
+    input,
+    select,
+    textarea{
+
+      width:100%;
+      padding:8px;
+      margin-top:5px;
+      box-sizing:border-box;
+
+    }
+
+    button{
+
+      margin-top:20px;
+      width:100%;
+      padding:10px;
+      cursor:pointer;
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<h2>Add Application</h2>
+
+<label>Company *</label>
+<input id="company">
+
+<label>Position *</label>
+<input id="position">
+
+<label>Platform *</label>
+
+<select id="platform">
+
+<option>LinkedIn</option>
+<option>JobStreet</option>
+<option>Indeed</option>
+<option>Company Website</option>
+<option>Referral</option>
+
+</select>
+
+<label>Location</label>
+<input id="location">
+
+<label>Work Type *</label>
+
+<select id="workType">
+
+<option>Remote</option>
+<option>Hybrid</option>
+<option>On-site</option>
+
+</select>
+
+<label>Notes</label>
+
+<textarea id="notes" rows="5"></textarea>
+
+<button onclick="saveApplication()">
+    Save Application
+</button>
+
+<p style="font-size:12px;color:gray;">
+Save functionality will be added in the next step.
+</p>
+
+<script>
+
+function saveApplication() {
+
+    const data = {
+
+        company: document.getElementById("company").value.trim(),
+        position: document.getElementById("position").value.trim(),
+        platform: document.getElementById("platform").value,
+        location: document.getElementById("location").value.trim(),
+        workType: document.getElementById("workType").value,
+        salary: "",
+        jobUrl: "",
+        resumeVersion: "",
+        coverLetter: "No",
+        notes: document.getElementById("notes").value.trim()
+
+    };
+
+    // Validation
+    if (!data.company) {
+        alert("Company is required.");
+        return;
+    }
+
+    if (!data.position) {
+        alert("Position is required.");
+        return;
+    }
+
+    google.script.run
+        .withSuccessHandler(function(result){
+
+            alert(
+                "✅ Application Saved!\n\nApplication ID: " +
+                result.applicationId
+            );
+
+            google.script.host.close();
+
+        })
+        .withFailureHandler(function(error){
+
+            alert("❌ Error:\n\n" + error.message);
+
+        })
+        .saveApplication(data);
+
+}
+
+</script>
+
+</body>
 </html>
