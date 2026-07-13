@@ -71,11 +71,11 @@ function saveApplication(data) {
   const lastRow = sheet.getLastRow();
 
   const applicationId =
-    "APP-" + String(lastRow).padStart(6, "0");
+  generateApplicationId(lastRow);
 
   sheet.appendRow([
     applicationId,
-    new Date(),          // Date Applied
+    getCurrentTimestamp(),          // Date Applied
     data.company,
     data.position,
     data.platform,
@@ -90,7 +90,7 @@ function saveApplication(data) {
     data.resumeVersion,
     data.coverLetter,
     data.notes,
-    new Date()           // Last Updated
+    getCurrentTimestamp() // Last Updated           
   ]);
 
   return {
