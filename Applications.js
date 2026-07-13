@@ -37,7 +37,13 @@ function initializeApplicationsSheet() {
     "Last Updated"
   ];
 
-  sheet.clear();
+  // Only write headers if the sheet is empty
+if (sheet.getLastRow() === 0) {
+
+  sheet.getRange(1, 1, 1, headers.length)
+       .setValues([headers]);
+
+}
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
 
