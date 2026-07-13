@@ -5,17 +5,14 @@
  */
 
 function onOpen() {
-
   SpreadsheetApp.getUi()
     .createMenu("🚀 CareerFlow")
     .addItem("📊 Dashboard", "showDashboard")
     .addSeparator()
     .addItem("➕ Add Application", "addApplication")
-    .addItem("🛠 Initialize Database", "initializeApplicationsSheet")
     .addSeparator()
     .addItem("ℹ️ About", "showAbout")
     .addToUi();
-
 }
 
 function showAbout() {
