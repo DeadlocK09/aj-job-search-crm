@@ -35,10 +35,89 @@ function updateDashboard() {
   dashboard.setRowHeight(1, 40);
 
   // Statistics cards
-  buildDashboardCard_(dashboard, 3, 1, "Applications", totalApplications);
-  buildDashboardCard_(dashboard, 3, 4, "Interviews", 0);
-  buildDashboardCard_(dashboard, 8, 1, "Offers", 0);
-  buildDashboardCard_(dashboard, 8, 4, "Rejected", 0);
+  const statusCounts = getApplicationStatusCounts_(applications);
+
+buildDashboardCard_(
+  dashboard,
+  3,
+  1,
+  "Applications",
+  totalApplications
+);
+
+buildDashboardCard_(
+  dashboard,
+  3,
+  4,
+  "Interviews",
+  statusCounts.interviews
+);
+
+buildDashboardCard_(
+  dashboard,
+  8,
+  1,
+  "Offers",
+  statusCounts.offers
+);
+
+buildDashboardCard_(
+  dashboard,
+  8,
+  4,
+  "Rejected",
+  statusCounts.rejected
+);
+
+/**
+ * Counts applications by status.
+ *
+ * Status is stored in column I.
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} applicationsSheet
+ * @returns {{
+ *   interviews: number,
+ *   offers: number,
+ *   rejected: number
+ * }}
+ */
+function getApplicationStatusCounts_(applicationsSheet) {
+  const lastRow = applicationsSheet.getLastRow();
+
+  const counts = {
+    interviews: 0,
+    offers: 0,
+    rejected: 0
+  };
+
+  if (lastRow < 2) {
+    return counts;
+  }
+
+  const statuses = applicationsSheet
+    .getRange(2, 9, lastRow - 1, 1)
+    .getValues();
+
+  statuses.forEach(function (row) {
+    const status = String(row[0] || "")
+      .trim()
+      .toLowerCase();
+
+    if (status.includes("interview")) {
+      counts.interviews++;
+    }
+
+    if (status === "offer" || status === "accepted") {
+      counts.offers++;
+    }
+
+    if (status === "rejected") {
+      counts.rejected++;
+    }
+  });
+
+  return counts;
+}
 
   // Recent applications title
   dashboard
