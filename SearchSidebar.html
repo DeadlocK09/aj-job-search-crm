@@ -15,7 +15,8 @@
       color: #1a73e8;
     }
 
-    input {
+    input,
+    select {
       width: 100%;
       padding: 9px;
       box-sizing: border-box;
@@ -89,16 +90,50 @@
 <body>
   <h2>🔍 Search Applications</h2>
 
-  <input
-    id="keyword"
-    type="text"
-    placeholder="Enter company name"
-    onkeydown="handleKeydown(event)"
-  >
+  <label>Company</label>
+<input
+  id="company"
+  type="text"
+  placeholder="Enter company name"
+  onkeydown="handleKeydown(event)"
+>
 
-  <button id="searchButton" onclick="runSearch()">
-    Search
-  </button>
+<label>Status</label>
+<select id="status">
+  <option value="">Any</option>
+  <option>Applied</option>
+  <option>Assessment</option>
+  <option>HR Interview</option>
+  <option>Technical Interview</option>
+  <option>Final Interview</option>
+  <option>Offer</option>
+  <option>Accepted</option>
+  <option>Rejected</option>
+  <option>Withdrawn</option>
+</select>
+
+<label>Platform</label>
+<select id="platform">
+  <option value="">Any</option>
+  <option>LinkedIn</option>
+  <option>JobStreet</option>
+  <option>Indeed</option>
+  <option>Company Website</option>
+  <option>Referral</option>
+  <option>Other</option>
+</select>
+
+<label>Work Type</label>
+<select id="workType">
+  <option value="">Any</option>
+  <option>Remote</option>
+  <option>Hybrid</option>
+  <option>On-site</option>
+</select>
+
+<button id="searchButton" onclick="runSearch()">
+  Search
+</button>
 
   <div id="message"></div>
   <div id="results"></div>
@@ -110,37 +145,51 @@
       }
     }
 
-    function runSearch() {
-      const keyword = document
-        .getElementById("keyword")
-        .value
-        .trim();
+function runSearch() {
+  const filters = {
+    company: document
+      .getElementById("company")
+      .value
+      .trim(),
 
-      const button = document.getElementById("searchButton");
-      const message = document.getElementById("message");
-      const results = document.getElementById("results");
+    status: document
+      .getElementById("status")
+      .value,
 
-      button.disabled = true;
-      button.textContent = "Searching...";
-      message.textContent = "";
-      results.innerHTML = "";
+    platform: document
+      .getElementById("platform")
+      .value,
 
-      google.script.run
-        .withSuccessHandler(function (applications) {
-          button.disabled = false;
-          button.textContent = "Search";
+    workType: document
+      .getElementById("workType")
+      .value
+  };
 
-          displayResults(applications);
-        })
-        .withFailureHandler(function (error) {
-          button.disabled = false;
-          button.textContent = "Search";
+  const button = document.getElementById("searchButton");
+  const message = document.getElementById("message");
+  const results = document.getElementById("results");
 
-          message.textContent =
-            "Search failed: " + (error.message || error);
-        })
-        .searchApplications(keyword);
-    }
+  button.disabled = true;
+  button.textContent = "Searching...";
+  message.textContent = "";
+  results.innerHTML = "";
+
+  google.script.run
+    .withSuccessHandler(function (applications) {
+      button.disabled = false;
+      button.textContent = "Search";
+
+      displayResults(applications);
+    })
+    .withFailureHandler(function (error) {
+      button.disabled = false;
+      button.textContent = "Search";
+
+      message.textContent =
+        "Search failed: " + (error.message || error);
+    })
+    .searchApplications(filters);
+}
 
     function displayResults(applications) {
       const message = document.getElementById("message");
@@ -173,6 +222,7 @@
           'ID: ' + escapeHtml(application.applicationId) +
           '<br>Status: ' + escapeHtml(application.status) +
           '<br>Platform: ' + escapeHtml(application.platform) +
+          '<br>Work type: ' + escapeHtml(application.workType) +
           '<br>Date applied: ' + escapeHtml(application.dateApplied) +
           '</div>' +
 

@@ -3,6 +3,9 @@
  * Search Module
  */
 
+/**
+ * Opens the Search Applications sidebar.
+ */
 function showSearchSidebar() {
   const html = HtmlService
     .createHtmlOutputFromFile("SearchSidebar")
@@ -12,16 +15,24 @@ function showSearchSidebar() {
 }
 
 /**
- * Searches applications by company name and returns
- * browser-safe objects instead of raw spreadsheet rows.
+ * Searches applications using one or more filters.
  *
- * @param {string} keyword
+ * Supports the older string format:
+ * searchApplications("Google")
+ *
+ * And the new filter-object format:
+ * searchApplications({
+ *   company: "Google",
+ *   status: "Applied",
+ *   platform: "LinkedIn",
+ *   workType: "Remote"
+ * })
+ *
+ * @param {string|Object} filters
  * @returns {Array<Object>}
  */
-function searchApplications(keyword) {
-  const searchTerm = String(keyword || "")
-    .trim()
-    .toLowerCase();
+function searchApplications(filters) {
+  const normalizedFilters = normalizeSearchFilters_(filters);
 
   const sheet = getApplicationsSheet();
   const lastRow = sheet.getLastRow();
@@ -36,9 +47,33 @@ function searchApplications(keyword) {
 
   return rows
     .filter(function (row) {
-      const company = String(row[2] || "").toLowerCase();
+      const company = String(row[2] || "").trim().toLowerCase();
+      const platform = String(row[4] || "").trim().toLowerCase();
+      const workType = String(row[6] || "").trim().toLowerCase();
+      const status = String(row[8] || "").trim().toLowerCase();
 
-      return company.includes(searchTerm);
+      const companyMatches =
+        !normalizedFilters.company ||
+        company.includes(normalizedFilters.company);
+
+      const statusMatches =
+        !normalizedFilters.status ||
+        status === normalizedFilters.status;
+
+      const platformMatches =
+        !normalizedFilters.platform ||
+        platform === normalizedFilters.platform;
+
+      const workTypeMatches =
+        !normalizedFilters.workType ||
+        workType === normalizedFilters.workType;
+
+      return (
+        companyMatches &&
+        statusMatches &&
+        platformMatches &&
+        workTypeMatches
+      );
     })
     .map(function (row) {
       return {
@@ -47,6 +82,7 @@ function searchApplications(keyword) {
         company: String(row[2] || ""),
         position: String(row[3] || ""),
         platform: String(row[4] || ""),
+        location: String(row[5] || ""),
         workType: String(row[6] || ""),
         status: String(row[8] || "")
       };
@@ -54,7 +90,33 @@ function searchApplications(keyword) {
 }
 
 /**
- * Converts spreadsheet dates into sidebar-safe text.
+ * Converts search input into a consistent filter object.
+ *
+ * @param {string|Object} filters
+ * @returns {Object}
+ */
+function normalizeSearchFilters_(filters) {
+  if (typeof filters === "string") {
+    return {
+      company: filters.trim().toLowerCase(),
+      status: "",
+      platform: "",
+      workType: ""
+    };
+  }
+
+  const input = filters || {};
+
+  return {
+    company: String(input.company || "").trim().toLowerCase(),
+    status: String(input.status || "").trim().toLowerCase(),
+    platform: String(input.platform || "").trim().toLowerCase(),
+    workType: String(input.workType || "").trim().toLowerCase()
+  };
+}
+
+/**
+ * Converts spreadsheet dates into browser-safe text.
  *
  * @param {*} value
  * @returns {string}
