@@ -8,6 +8,7 @@ function onOpen() {
     .createMenu("🚀 CareerFlow")
     .addItem("📊 Dashboard", "updateDashboard")
     .addSeparator()
+    .addItem("🔍 Search Applications", "showSearchSidebar")
     .addItem("➕ Add Application", "addApplication")
     .addSeparator()
     .addItem("ℹ️ About", "showAbout")

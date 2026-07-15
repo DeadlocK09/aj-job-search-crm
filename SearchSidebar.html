@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 18px;
+      color: #202124;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #1a73e8;
+    }
+
+    input {
+      width: 100%;
+      padding: 9px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #1a73e8;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #9aa0a6;
+      cursor: wait;
+    }
+
+    #message {
+      margin-top: 14px;
+      color: #5f6368;
+    }
+
+    .card {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      background: #f8f9fa;
+    }
+
+    .company {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .position {
+      margin-top: 4px;
+    }
+
+    .details {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #5f6368;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>🔍 Search Applications</h2>
+
+  <input
+    id="keyword"
+    type="text"
+    placeholder="Enter company name"
+    onkeydown="handleKeydown(event)"
+  >
+
+  <button id="searchButton" onclick="runSearch()">
+    Search
+  </button>
+
+  <div id="message"></div>
+  <div id="results"></div>
+
+  <script>
+    function handleKeydown(event) {
+      if (event.key === "Enter") {
+        runSearch();
+      }
+    }
+
+    function runSearch() {
+      const keyword = document
+        .getElementById("keyword")
+        .value
+        .trim();
+
+      const button = document.getElementById("searchButton");
+      const message = document.getElementById("message");
+      const results = document.getElementById("results");
+
+      button.disabled = true;
+      button.textContent = "Searching...";
+      message.textContent = "";
+      results.innerHTML = "";
+
+      google.script.run
+        .withSuccessHandler(function (applications) {
+          button.disabled = false;
+          button.textContent = "Search";
+
+          displayResults(applications);
+        })
+        .withFailureHandler(function (error) {
+          button.disabled = false;
+          button.textContent = "Search";
+
+          message.textContent =
+            "Search failed: " + (error.message || error);
+        })
+        .searchApplications(keyword);
+    }
+
+    function displayResults(applications) {
+      const message = document.getElementById("message");
+      const results = document.getElementById("results");
+
+      results.innerHTML = "";
+
+      if (!applications || applications.length === 0) {
+        message.textContent = "No matching applications found.";
+        return;
+      }
+
+      message.textContent =
+        applications.length + " result(s) found.";
+
+      applications.forEach(function (application) {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML =
+          '<div class="company">' +
+          escapeHtml(application.company) +
+          "</div>" +
+          '<div class="position">' +
+          escapeHtml(application.position) +
+          "</div>" +
+          '<div class="details">' +
+          "ID: " +
+          escapeHtml(application.applicationId) +
+          "<br>Status: " +
+          escapeHtml(application.status) +
+          "<br>Platform: " +
+          escapeHtml(application.platform) +
+          "<br>Date applied: " +
+          escapeHtml(application.dateApplied) +
+          "</div>";
+
+        results.appendChild(card);
+      });
+    }
+
+    function escapeHtml(value) {
+      const element = document.createElement("div");
+      element.textContent = String(value || "");
+      return element.innerHTML;
+    }
+  </script>
+</body>
+</html>
