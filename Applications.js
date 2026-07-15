@@ -4,98 +4,84 @@
  */
 
 /**
- * Creates the Applications sheet if it doesn't exist
- * and initializes the headers.
+ * Returns the Applications sheet.
+ *
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet}
  */
-function initializeApplicationsSheet() {
-
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  let sheet = ss.getSheetByName(CONFIG.SHEETS.APPLICATIONS);
+function getApplicationsSheet() {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(CONFIG.SHEETS.APPLICATIONS);
 
   if (!sheet) {
-    sheet = ss.insertSheet(CONFIG.SHEETS.APPLICATIONS);
+    throw new Error('The "Applications" sheet was not found.');
   }
 
-  const headers = [
-    "Application ID",
-    "Date Applied",
-    "Company",
-    "Position",
-    "Platform",
-    "Location",
-    "Work Type",
-    "Salary",
-    "Status",
-    "Recruiter",
-    "Recruiter Email",
-    "Job URL",
-    "Follow-up Date",
-    "Resume Version",
-    "Cover Letter",
-    "Notes",
-    "Last Updated"
-  ];
-
-  sheet.clear();
-
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-
-  // Format the header row
-  const headerRange = sheet.getRange(1, 1, 1, headers.length);
-
-  headerRange.setFontWeight("bold");
-  headerRange.setBackground("#1A73E8");
-  headerRange.setFontColor("#FFFFFF");
-
-  sheet.setFrozenRows(1);
-  sheet.autoResizeColumns(1, headers.length);
-
-  SpreadsheetApp.getUi().alert(
-    "Applications sheet initialized successfully!"
-  );
-
+  return sheet;
 }
 
 /**
  * Saves a new job application.
  *
  * @param {Object} data Form data from the sidebar.
+ * @returns {{success: boolean, applicationId: string}}
  */
 function saveApplication(data) {
+  if (!data) {
+    throw new Error("No application data was received.");
+  }
 
-  const sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
-    .getSheetByName(CONFIG.SHEETS.APPLICATIONS);
+  const company = String(data.company || "").trim();
+  const position = String(data.position || "").trim();
+  const platform = String(data.platform || "").trim();
+  const workType = String(data.workType || "").trim();
 
+  if (!company) {
+    throw new Error("Company is required.");
+  }
+
+  if (!position) {
+    throw new Error("Position is required.");
+  }
+
+  if (!platform) {
+    throw new Error("Platform is required.");
+  }
+
+  if (!workType) {
+    throw new Error("Work type is required.");
+  }
+
+  const sheet = getApplicationsSheet();
   const lastRow = sheet.getLastRow();
 
-  const applicationId =
-  generateApplicationId(lastRow);
+  const applicationId = generateApplicationId(lastRow);
+  const timestamp = getCurrentTimestamp();
 
   sheet.appendRow([
     applicationId,
-    getCurrentTimestamp(),          // Date Applied
-    data.company,
-    data.position,
-    data.platform,
-    data.location,
-    data.workType,
-    data.salary,
+    timestamp,                                  // Date Applied
+    company,
+    position,
+    platform,
+    String(data.location || "").trim(),
+    workType,
+    String(data.salary || "").trim(),
     CONFIG.STATUS.APPLIED,
-    "",                  // Recruiter
-    "",                  // Recruiter Email
-    data.jobUrl,
-    "",                  // Follow-up Date
-    data.resumeVersion,
-    data.coverLetter,
-    data.notes,
-    getCurrentTimestamp() // Last Updated           
+    "",                                         // Recruiter
+    "",                                         // Recruiter Email
+    String(data.jobUrl || "").trim(),
+    "",                                         // Follow-up Date
+    String(data.resumeVersion || "").trim(),
+    String(data.coverLetter || "No").trim(),
+    String(data.notes || "").trim(),
+    timestamp                                   // Last Updated
   ]);
+
+  updateDashboard();
 
   return {
     success: true,
     applicationId: applicationId
   };
-
 }

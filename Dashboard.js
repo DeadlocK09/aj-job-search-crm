@@ -1,25 +1,119 @@
 /**
- * =====================================
- * Dashboard Module
- * =====================================
+ * CareerFlow Dashboard
  */
+
+function updateDashboard() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const dashboard = ss.getSheetByName(CONFIG.SHEETS.DASHBOARD);
+  const applications = ss.getSheetByName(CONFIG.SHEETS.APPLICATIONS);
+
+  if (!dashboard || !applications) {
+    SpreadsheetApp.getUi().alert(
+      "Dashboard or Applications sheet was not found."
+    );
+    return;
+  }
+
+  const totalApplications = Math.max(applications.getLastRow() - 1, 0);
+
+  dashboard.clear();
+  dashboard.setHiddenGridlines(true);
+
+  // Title
+  dashboard.getRange("A1:H1").merge();
+
+  dashboard
+    .getRange("A1")
+    .setValue("🚀 CareerFlow Dashboard")
+    .setFontSize(22)
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center")
+    .setBackground("#1A73E8")
+    .setFontColor("#FFFFFF");
+
+  dashboard.setRowHeight(1, 40);
+
+  // Statistics cards
+  buildDashboardCard_(dashboard, 3, 1, "Applications", totalApplications);
+  buildDashboardCard_(dashboard, 3, 4, "Interviews", 0);
+  buildDashboardCard_(dashboard, 8, 1, "Offers", 0);
+  buildDashboardCard_(dashboard, 8, 4, "Rejected", 0);
+
+  // Recent applications title
+  dashboard
+    .getRange("A13:D13")
+    .merge()
+    .setValue("Recent Applications")
+    .setFontWeight("bold")
+    .setFontSize(14)
+    .setBackground("#E8F0FE");
+
+  if (totalApplications === 0) {
+    dashboard
+      .getRange("A14:D14")
+      .merge()
+      .setValue("No applications recorded yet.");
+
+    ss.setActiveSheet(dashboard);
+    return;
+  }
+
+  const numberOfRecentRecords = Math.min(totalApplications, 5);
+
+  const recentApplications = applications
+    .getRange(
+      applications.getLastRow() - numberOfRecentRecords + 1,
+      1,
+      numberOfRecentRecords,
+      4
+    )
+    .getValues()
+    .reverse();
+
+  dashboard
+    .getRange(14, 1, recentApplications.length, 4)
+    .setValues(recentApplications);
+
+  dashboard
+    .getRange(14, 2, recentApplications.length, 1)
+    .setNumberFormat("mmm d, yyyy");
+
+  dashboard.autoResizeColumns(1, 8);
+
+  ss.setActiveSheet(dashboard);
+}
 
 /**
- * Returns dashboard statistics.
+ * Builds one dashboard statistics card.
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @param {number} row
+ * @param {number} column
+ * @param {string} title
+ * @param {number} value
  */
-function getDashboardStats() {
+function buildDashboardCard_(sheet, row, column, title, value) {
+  const cardRange = sheet.getRange(row, column, 3, 2);
 
-  const sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
-    .getSheetByName(CONFIG.SHEETS.APPLICATIONS);
+  cardRange
+    .setBackground("#F8F9FA")
+    .setBorder(true, true, true, true, false, false);
 
-  const totalApplications =
-    Math.max(sheet.getLastRow() - 1, 0);
+  sheet
+    .getRange(row, column, 1, 2)
+    .merge()
+    .setValue(title)
+    .setBackground("#E8F0FE")
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center");
 
-  return {
-
-    totalApplications: totalApplications
-
-  };
-
+  sheet
+    .getRange(row + 1, column, 2, 2)
+    .merge()
+    .setValue(value)
+    .setFontSize(24)
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle");
 }

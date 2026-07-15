@@ -33,13 +33,6 @@ function scanGmail() {
 
 }
 
-function updateDashboard() {
-
-  SpreadsheetApp
-    .getUi()
-    .alert("Coming Soon!\n\nUpdating Dashboard");
-
-}
 
 function showSettings() {
 
