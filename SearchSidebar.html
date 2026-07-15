@@ -35,6 +35,22 @@
       cursor: pointer;
     }
 
+    .edit-button{
+      margin-top:10px;
+      width:100%;
+      background:#188038;
+    }
+
+    .delete-button {
+      margin-top: 8px;
+      width: 100%;
+      background: #d93025;
+    }
+
+    .delete-button:hover {
+      background: #b3261e;
+    }
+
     button:disabled {
       background: #9aa0a6;
       cursor: wait;
@@ -147,24 +163,71 @@
         card.innerHTML =
           '<div class="company">' +
           escapeHtml(application.company) +
-          "</div>" +
+          '</div>' +
+
           '<div class="position">' +
           escapeHtml(application.position) +
-          "</div>" +
+          '</div>' +
+
           '<div class="details">' +
-          "ID: " +
-          escapeHtml(application.applicationId) +
-          "<br>Status: " +
-          escapeHtml(application.status) +
-          "<br>Platform: " +
-          escapeHtml(application.platform) +
-          "<br>Date applied: " +
-          escapeHtml(application.dateApplied) +
-          "</div>";
+          'ID: ' + escapeHtml(application.applicationId) +
+          '<br>Status: ' + escapeHtml(application.status) +
+          '<br>Platform: ' + escapeHtml(application.platform) +
+          '<br>Date applied: ' + escapeHtml(application.dateApplied) +
+          '</div>' +
+
+          '<button class="edit-button" onclick="openEditForm(\'' + escapeHtml(application.applicationId) + '\')">' + '✏ Edit' +
+          '</button>' +
+
+          '<button class="delete-button" onclick="confirmDelete(\'' + escapeHtml(application.applicationId) + '\', \'' + escapeHtml(application.company) + '\')">' +'🗑 Delete' +
+          '</button>';
 
         results.appendChild(card);
       });
     }
+    
+    function openEditForm(applicationId){
+
+    google.script.run
+    .withFailureHandler(function(error){
+
+      document.getElementById("message").textContent =
+        error.message || error;
+
+    })
+    .showEditApplicationSidebar(applicationId);
+
+    }
+
+    function confirmDelete(applicationId, company) {
+  const confirmed = window.confirm(
+    "Delete this application?\n\n" +
+    "Company: " + company + "\n" +
+    "Application ID: " + applicationId + "\n\n" +
+    "This action cannot be undone."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const message = document.getElementById("message");
+
+  message.textContent = "Deleting application...";
+
+  google.script.run
+    .withSuccessHandler(function () {
+      message.textContent =
+        "Application " + applicationId + " was deleted.";
+
+      runSearch();
+    })
+    .withFailureHandler(function (error) {
+      message.textContent =
+        "Delete failed: " + (error.message || error);
+    })
+    .deleteApplication(applicationId);
+}
 
     function escapeHtml(value) {
       const element = document.createElement("div");

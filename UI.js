@@ -41,3 +41,17 @@ function showSettings() {
     .alert("Coming Soon!\n\nSettings");
 
 }
+
+function showEditApplicationSidebar(applicationId) {
+  const template = HtmlService.createTemplateFromFile(
+    "EditApplicationSidebar"
+  );
+
+  template.applicationId = String(applicationId);
+
+  const html = template
+    .evaluate()
+    .setTitle("Edit Application");
+
+  SpreadsheetApp.getUi().showSidebar(html);
+}
