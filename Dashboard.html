@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<base target="_top">
+
+<style>
+
+body{
+
+font-family:Arial,sans-serif;
+padding:20px;
+
+}
+
+.card{
+
+padding:20px;
+border-radius:10px;
+border:1px solid #ddd;
+
+}
+
+.number{
+
+font-size:36px;
+font-weight:bold;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>🚀 CareerFlow Dashboard</h2>
+
+<div class="card">
+
+<div>Total Applications</div>
+
+<div
+class="number"
+id="applications">
+
+Loading...
+
+</div>
+
+</div>
+
+<script>
+
+google.script.run
+.withSuccessHandler(function(stats){
+
+document
+.getElementById("applications")
+.innerHTML =
+stats.totalApplications;
+
+})
+.getDashboardStats();
+
+</script>
+
+</body>
+
+</html>
