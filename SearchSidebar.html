@@ -237,62 +237,105 @@ function runSearch() {
 }
 
     function displayResults(applications) {
-      const message = document.getElementById("message");
-      const results = document.getElementById("results");
+  const message = document.getElementById("message");
+  const results = document.getElementById("results");
 
-      results.innerHTML = "";
+  results.innerHTML = "";
 
-      if (!applications || applications.length === 0) {
-        message.textContent = "No matching applications found.";
-        return;
-      }
+  if (!applications || applications.length === 0) {
+    message.textContent = "No matching applications found.";
+    return;
+  }
 
-      message.textContent =
-        applications.length + " result(s) found.";
+  message.textContent =
+    applications.length + " result(s) found.";
 
-      applications.forEach(function (application) {
-        const card = document.createElement("div");
-        card.className = "card";
+  applications.forEach(function (application) {
+    const card = document.createElement("div");
+    card.className = "card";
 
-        const statusClass = getStatusClass(application.status);
+    const statusClass =
+      getStatusClass(application.status);
 
-card.innerHTML =
-  '<div class="company">' +
-  escapeHtml(application.company) +
-  '</div>' +
+    card.innerHTML =
+      '<div class="company">' +
+      escapeHtml(application.company) +
+      "</div>" +
 
-  '<div class="position">' +
-  escapeHtml(application.position) +
-  '</div>' +
+      '<div class="position">' +
+      escapeHtml(application.position) +
+      "</div>" +
 
-  '<div class="status-badge ' +
-  statusClass +
-  '">' +
-  escapeHtml(application.status) +
-  '</div>' +
+      '<div class="status-badge ' +
+      statusClass +
+      '">' +
+      escapeHtml(application.status) +
+      "</div>" +
 
-  '<div class="details">' +
-  'ID: ' + escapeHtml(application.applicationId) +
-  '<br>Platform: ' + escapeHtml(application.platform) +
-  '<br>Work type: ' + escapeHtml(application.workType) +
-  '<br>Date applied: ' + escapeHtml(application.dateApplied) +
-  '</div>' +
+      '<div class="details">' +
+      "ID: " +
+      escapeHtml(application.applicationId) +
+      "<br>Platform: " +
+      escapeHtml(application.platform) +
+      "<br>Work type: " +
+      escapeHtml(application.workType) +
+      "<br>Date applied: " +
+      escapeHtml(application.dateApplied) +
+      "</div>" +
 
-  '<div class="action-row">' +
-  '<button class="edit-button" onclick="openEditForm(\'' +
-  escapeHtml(application.applicationId) +
-  '\')">✏ Edit</button>' +
+      '<div class="action-row">' +
+      '<button class="edit-button">✏ Edit</button>' +
+      '<button class="delete-button">🗑 Delete</button>' +
+      "</div>";
 
-  '<button class="delete-button" onclick="confirmDelete(\'' +
-  escapeHtml(application.applicationId) +
-  '\', \'' +
-  escapeHtml(application.company) +
-  '\')">🗑 Delete</button>' +
-  '</div>';
+    const editButton =
+      card.querySelector(".edit-button");
 
-        results.appendChild(card);
+    editButton.addEventListener("click", function () {
+      openEditForm(application.applicationId);
+    });
+
+    const deleteButton =
+      card.querySelector(".delete-button");
+
+    deleteButton.addEventListener("click", function () {
+      confirmDelete(
+        application.applicationId,
+        application.company
+      );
+    });
+
+    if (application.jobUrl) {
+      const jobButton =
+        document.createElement("button");
+
+      jobButton.className = "job-button";
+      jobButton.type = "button";
+      jobButton.textContent = "🌐 Open Job";
+
+      jobButton.addEventListener("click", function () {
+        const safeUrl =
+          normalizeJobUrl(application.jobUrl);
+
+        if (!safeUrl) {
+          message.textContent =
+            "The saved Job URL is invalid.";
+          return;
+        }
+
+        window.open(
+          safeUrl,
+          "_blank",
+          "noopener,noreferrer"
+        );
       });
+
+      card.appendChild(jobButton);
     }
+
+    results.appendChild(card);
+  });
+}
     
     function openEditForm(applicationId){
 
@@ -362,6 +405,34 @@ function getStatusClass(status) {
   }
 
   return "status-default";
+}
+
+function normalizeJobUrl(value) {
+  const url = String(value || "").trim();
+
+  if (!url) {
+    return "";
+  }
+
+  try {
+    const completeUrl =
+      /^https?:\/\//i.test(url)
+        ? url
+        : "https://" + url;
+
+    const parsedUrl = new URL(completeUrl);
+
+    if (
+      parsedUrl.protocol !== "http:" &&
+      parsedUrl.protocol !== "https:"
+    ) {
+      return "";
+    }
+
+    return parsedUrl.href;
+  } catch (error) {
+    return "";
+  }
 }
 
     function escapeHtml(value) {

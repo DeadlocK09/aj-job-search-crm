@@ -84,7 +84,8 @@ function searchApplications(filters) {
         platform: String(row[4] || ""),
         location: String(row[5] || ""),
         workType: String(row[6] || ""),
-        status: String(row[8] || "")
+        status: String(row[8] || ""),
+        jobUrl: String(row[11] || "").trim()
       };
     });
 }
