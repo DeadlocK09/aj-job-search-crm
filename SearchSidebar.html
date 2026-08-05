@@ -84,6 +84,51 @@
       font-size: 12px;
       color: #5f6368;
     }
+
+    .status-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-applied {
+  background: #e8f0fe;
+  color: #1967d2;
+}
+
+.status-interview {
+  background: #fef7e0;
+  color: #b06000;
+}
+
+.status-offer {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.status-rejected {
+  background: #fce8e6;
+  color: #b3261e;
+}
+
+.status-default {
+  background: #f1f3f4;
+  color: #5f6368;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.action-row button {
+  flex: 1;
+  margin-top: 0;
+}
   </style>
 </head>
 
@@ -209,28 +254,41 @@ function runSearch() {
         const card = document.createElement("div");
         card.className = "card";
 
-        card.innerHTML =
-          '<div class="company">' +
-          escapeHtml(application.company) +
-          '</div>' +
+        const statusClass = getStatusClass(application.status);
 
-          '<div class="position">' +
-          escapeHtml(application.position) +
-          '</div>' +
+card.innerHTML =
+  '<div class="company">' +
+  escapeHtml(application.company) +
+  '</div>' +
 
-          '<div class="details">' +
-          'ID: ' + escapeHtml(application.applicationId) +
-          '<br>Status: ' + escapeHtml(application.status) +
-          '<br>Platform: ' + escapeHtml(application.platform) +
-          '<br>Work type: ' + escapeHtml(application.workType) +
-          '<br>Date applied: ' + escapeHtml(application.dateApplied) +
-          '</div>' +
+  '<div class="position">' +
+  escapeHtml(application.position) +
+  '</div>' +
 
-          '<button class="edit-button" onclick="openEditForm(\'' + escapeHtml(application.applicationId) + '\')">' + '✏ Edit' +
-          '</button>' +
+  '<div class="status-badge ' +
+  statusClass +
+  '">' +
+  escapeHtml(application.status) +
+  '</div>' +
 
-          '<button class="delete-button" onclick="confirmDelete(\'' + escapeHtml(application.applicationId) + '\', \'' + escapeHtml(application.company) + '\')">' +'🗑 Delete' +
-          '</button>';
+  '<div class="details">' +
+  'ID: ' + escapeHtml(application.applicationId) +
+  '<br>Platform: ' + escapeHtml(application.platform) +
+  '<br>Work type: ' + escapeHtml(application.workType) +
+  '<br>Date applied: ' + escapeHtml(application.dateApplied) +
+  '</div>' +
+
+  '<div class="action-row">' +
+  '<button class="edit-button" onclick="openEditForm(\'' +
+  escapeHtml(application.applicationId) +
+  '\')">✏ Edit</button>' +
+
+  '<button class="delete-button" onclick="confirmDelete(\'' +
+  escapeHtml(application.applicationId) +
+  '\', \'' +
+  escapeHtml(application.company) +
+  '\')">🗑 Delete</button>' +
+  '</div>';
 
         results.appendChild(card);
       });
@@ -277,6 +335,33 @@ function runSearch() {
         "Delete failed: " + (error.message || error);
     })
     .deleteApplication(applicationId);
+}
+
+function getStatusClass(status) {
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalized === "applied") {
+    return "status-applied";
+  }
+
+  if (normalized.includes("interview")) {
+    return "status-interview";
+  }
+
+  if (
+    normalized === "offer" ||
+    normalized === "accepted"
+  ) {
+    return "status-offer";
+  }
+
+  if (normalized === "rejected") {
+    return "status-rejected";
+  }
+
+  return "status-default";
 }
 
     function escapeHtml(value) {
