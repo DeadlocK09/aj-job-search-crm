@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 18px;
+      color: #202124;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #1a73e8;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #1a73e8;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #9aa0a6;
+      cursor: wait;
+    }
+
+    #message {
+      margin-top: 12px;
+      color: #5f6368;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>✏ Edit Application</h2>
+
+  <input id="applicationId" type="hidden">
+
+  <label>Company *</label>
+  <input id="company">
+
+  <label>Position *</label>
+  <input id="position">
+
+  <label>Platform</label>
+  <select id="platform">
+    <option>LinkedIn</option>
+    <option>JobStreet</option>
+    <option>Indeed</option>
+    <option>Company Website</option>
+    <option>Referral</option>
+    <option>Other</option>
+  </select>
+
+  <label>Location</label>
+  <input id="location">
+
+  <label>Work Type</label>
+  <select id="workType">
+    <option>Remote</option>
+    <option>Hybrid</option>
+    <option>On-site</option>
+  </select>
+
+  <label>Status</label>
+  <select id="status">
+    <option>Applied</option>
+    <option>Assessment</option>
+    <option>Interview</option>
+    <option>HR Interview</option>
+    <option>Technical Interview</option>
+    <option>Final Interview</option>
+    <option>Offer</option>
+    <option>Accepted</option>
+    <option>Rejected</option>
+    <option>Withdrawn</option>
+  </select>
+
+  <label>Salary</label>
+  <input id="salary">
+
+  <label>Recruiter</label>
+  <input id="recruiter">
+
+  <label>Recruiter Email</label>
+  <input id="recruiterEmail" type="email">
+
+  <label>Job URL</label>
+  <input id="jobUrl" type="url">
+
+  <label>Follow-up Date</label>
+  <input id="followUpDate" type="date">
+
+  <label>Resume Version</label>
+  <input id="resumeVersion">
+
+  <label>Cover Letter</label>
+  <select id="coverLetter">
+    <option>No</option>
+    <option>Yes</option>
+  </select>
+
+  <label>Notes</label>
+  <textarea id="notes"></textarea>
+
+  <button id="saveButton" onclick="saveChanges()">
+    Save Changes
+  </button>
+
+  <div id="message">Loading application...</div>
+
+  <script>
+    const applicationId = <?!= JSON.stringify(applicationId) ?>;
+
+    google.script.run
+      .withSuccessHandler(populateForm)
+      .withFailureHandler(showError)
+      .getApplicationById(applicationId);
+
+    function populateForm(application) {
+      document.getElementById("applicationId").value =
+        application.applicationId;
+      document.getElementById("company").value =
+        application.company;
+      document.getElementById("position").value =
+        application.position;
+      document.getElementById("platform").value =
+        application.platform;
+      document.getElementById("location").value =
+        application.location;
+      document.getElementById("workType").value =
+        application.workType;
+      document.getElementById("status").value =
+        application.status;
+      document.getElementById("salary").value =
+        application.salary;
+      document.getElementById("recruiter").value =
+        application.recruiter;
+      document.getElementById("recruiterEmail").value =
+        application.recruiterEmail;
+      document.getElementById("jobUrl").value =
+        application.jobUrl;
+      document.getElementById("followUpDate").value =
+        application.followUpDate;
+      document.getElementById("resumeVersion").value =
+        application.resumeVersion;
+      document.getElementById("coverLetter").value =
+        application.coverLetter;
+      document.getElementById("notes").value =
+        application.notes;
+
+      document.getElementById("message").textContent = "";
+    }
+
+    function saveChanges() {
+      const button = document.getElementById("saveButton");
+      const message = document.getElementById("message");
+
+      if (button.disabled) {
+        return;
+      }
+
+      const data = {
+        applicationId:
+          document.getElementById("applicationId").value,
+        company:
+          document.getElementById("company").value.trim(),
+        position:
+          document.getElementById("position").value.trim(),
+        platform:
+          document.getElementById("platform").value,
+        location:
+          document.getElementById("location").value.trim(),
+        workType:
+          document.getElementById("workType").value,
+        status:
+          document.getElementById("status").value,
+        salary:
+          document.getElementById("salary").value.trim(),
+        recruiter:
+          document.getElementById("recruiter").value.trim(),
+        recruiterEmail:
+          document.getElementById("recruiterEmail").value.trim(),
+        jobUrl:
+          document.getElementById("jobUrl").value.trim(),
+        followUpDate:
+          document.getElementById("followUpDate").value,
+        resumeVersion:
+          document.getElementById("resumeVersion").value.trim(),
+        coverLetter:
+          document.getElementById("coverLetter").value,
+        notes:
+          document.getElementById("notes").value.trim()
+      };
+
+      if (!data.company || !data.position) {
+        message.textContent =
+          "Company and position are required.";
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Saving...";
+      message.textContent = "";
+
+      google.script.run
+        .withSuccessHandler(function (result) {
+          button.disabled = false;
+          button.textContent = "Save Changes";
+          message.textContent =
+            "Application " + result.applicationId + " updated.";
+
+          setTimeout(function () {
+            google.script.host.close();
+          }, 800);
+        })
+        .withFailureHandler(function (error) {
+          button.disabled = false;
+          button.textContent = "Save Changes";
+          showError(error);
+        })
+        .updateApplication(data);
+    }
+
+    function showError(error) {
+      document.getElementById("message").textContent =
+        "Error: " + (error.message || error);
+    }
+  </script>
+</body>
+</html>

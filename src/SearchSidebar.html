@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 18px;
+      color: #202124;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #1a73e8;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 9px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #1a73e8;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .edit-button{
+      margin-top:10px;
+      width:100%;
+      background:#188038;
+    }
+
+    .delete-button {
+      margin-top: 8px;
+      width: 100%;
+      background: #d93025;
+    }
+
+    .delete-button:hover {
+      background: #b3261e;
+    }
+
+    button:disabled {
+      background: #9aa0a6;
+      cursor: wait;
+    }
+
+    #message {
+      margin-top: 14px;
+      color: #5f6368;
+    }
+
+    .card {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      background: #f8f9fa;
+    }
+
+    .company {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .position {
+      margin-top: 4px;
+    }
+
+    .details {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #5f6368;
+    }
+
+    .status-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-applied {
+  background: #e8f0fe;
+  color: #1967d2;
+}
+
+.status-interview {
+  background: #fef7e0;
+  color: #b06000;
+}
+
+.status-offer {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.status-rejected {
+  background: #fce8e6;
+  color: #b3261e;
+}
+
+.status-default {
+  background: #f1f3f4;
+  color: #5f6368;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.action-row button {
+  flex: 1;
+  margin-top: 0;
+}
+  </style>
+</head>
+
+<body>
+  <h2>🔍 Search Applications</h2>
+
+  <label>Company</label>
+<input
+  id="company"
+  type="text"
+  placeholder="Enter company name"
+  onkeydown="handleKeydown(event)"
+>
+
+<label>Status</label>
+<select id="status">
+  <option value="">Any</option>
+  <option>Applied</option>
+  <option>Assessment</option>
+  <option>Interview</option>
+  <option>HR Interview</option>
+  <option>Technical Interview</option>
+  <option>Final Interview</option>
+  <option>Offer</option>
+  <option>Accepted</option>
+  <option>Rejected</option>
+  <option>Withdrawn</option>
+</select>
+
+<label>Platform</label>
+<select id="platform">
+  <option value="">Any</option>
+  <option>LinkedIn</option>
+  <option>JobStreet</option>
+  <option>Indeed</option>
+  <option>Company Website</option>
+  <option>Referral</option>
+  <option>Other</option>
+</select>
+
+<label>Work Type</label>
+<select id="workType">
+  <option value="">Any</option>
+  <option>Remote</option>
+  <option>Hybrid</option>
+  <option>On-site</option>
+</select>
+
+<button id="searchButton" onclick="runSearch()">
+  Search
+</button>
+
+  <div id="message"></div>
+  <div id="results"></div>
+
+  <script>
+    function handleKeydown(event) {
+      if (event.key === "Enter") {
+        runSearch();
+      }
+    }
+
+function runSearch() {
+  const filters = {
+    company: document
+      .getElementById("company")
+      .value
+      .trim(),
+
+    status: document
+      .getElementById("status")
+      .value,
+
+    platform: document
+      .getElementById("platform")
+      .value,
+
+    workType: document
+      .getElementById("workType")
+      .value
+  };
+
+  const button = document.getElementById("searchButton");
+  const message = document.getElementById("message");
+  const results = document.getElementById("results");
+
+  button.disabled = true;
+  button.textContent = "Searching...";
+  message.textContent = "";
+  results.innerHTML = "";
+
+  google.script.run
+    .withSuccessHandler(function (applications) {
+      button.disabled = false;
+      button.textContent = "Search";
+
+      displayResults(applications);
+    })
+    .withFailureHandler(function (error) {
+      button.disabled = false;
+      button.textContent = "Search";
+
+      message.textContent =
+        "Search failed: " + (error.message || error);
+    })
+    .searchApplications(filters);
+}
+
+    function displayResults(applications) {
+  const message = document.getElementById("message");
+  const results = document.getElementById("results");
+
+  results.innerHTML = "";
+
+  if (!applications || applications.length === 0) {
+    message.textContent = "No matching applications found.";
+    return;
+  }
+
+  message.textContent =
+    applications.length + " result(s) found.";
+
+  applications.forEach(function (application) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const statusClass =
+      getStatusClass(application.status);
+
+    card.innerHTML =
+      '<div class="company">' +
+      escapeHtml(application.company) +
+      "</div>" +
+
+      '<div class="position">' +
+      escapeHtml(application.position) +
+      "</div>" +
+
+      '<div class="status-badge ' +
+      statusClass +
+      '">' +
+      escapeHtml(application.status) +
+      "</div>" +
+
+      '<div class="details">' +
+      "ID: " +
+      escapeHtml(application.applicationId) +
+      "<br>Platform: " +
+      escapeHtml(application.platform) +
+      "<br>Work type: " +
+      escapeHtml(application.workType) +
+      "<br>Date applied: " +
+      escapeHtml(application.dateApplied) +
+      "</div>" +
+
+      '<div class="action-row">' +
+      '<button class="edit-button">✏ Edit</button>' +
+      '<button class="delete-button">🗑 Delete</button>' +
+      "</div>";
+
+    const editButton =
+      card.querySelector(".edit-button");
+
+    editButton.addEventListener("click", function () {
+      openEditForm(application.applicationId);
+    });
+
+    const deleteButton =
+      card.querySelector(".delete-button");
+
+    deleteButton.addEventListener("click", function () {
+      confirmDelete(
+        application.applicationId,
+        application.company
+      );
+    });
+
+    if (application.jobUrl) {
+      const jobButton =
+        document.createElement("button");
+
+      jobButton.className = "job-button";
+      jobButton.type = "button";
+      jobButton.textContent = "🌐 Open Job";
+
+      jobButton.addEventListener("click", function () {
+        const safeUrl =
+          normalizeJobUrl(application.jobUrl);
+
+        if (!safeUrl) {
+          message.textContent =
+            "The saved Job URL is invalid.";
+          return;
+        }
+
+        window.open(
+          safeUrl,
+          "_blank",
+          "noopener,noreferrer"
+        );
+      });
+
+      card.appendChild(jobButton);
+    }
+
+    results.appendChild(card);
+  });
+}
+    
+    function openEditForm(applicationId){
+
+    google.script.run
+    .withFailureHandler(function(error){
+
+      document.getElementById("message").textContent =
+        error.message || error;
+
+    })
+    .showEditApplicationSidebar(applicationId);
+
+    }
+
+    function confirmDelete(applicationId, company) {
+  const confirmed = window.confirm(
+    "Delete this application?\n\n" +
+    "Company: " + company + "\n" +
+    "Application ID: " + applicationId + "\n\n" +
+    "This action cannot be undone."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const message = document.getElementById("message");
+
+  message.textContent = "Deleting application...";
+
+  google.script.run
+    .withSuccessHandler(function () {
+      message.textContent =
+        "Application " + applicationId + " was deleted.";
+
+      runSearch();
+    })
+    .withFailureHandler(function (error) {
+      message.textContent =
+        "Delete failed: " + (error.message || error);
+    })
+    .deleteApplication(applicationId);
+}
+
+function getStatusClass(status) {
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalized === "applied") {
+    return "status-applied";
+  }
+
+  if (normalized.includes("interview")) {
+    return "status-interview";
+  }
+
+  if (
+    normalized === "offer" ||
+    normalized === "accepted"
+  ) {
+    return "status-offer";
+  }
+
+  if (normalized === "rejected") {
+    return "status-rejected";
+  }
+
+  return "status-default";
+}
+
+function normalizeJobUrl(value) {
+  const url = String(value || "").trim();
+
+  if (!url) {
+    return "";
+  }
+
+  try {
+    const completeUrl =
+      /^https?:\/\//i.test(url)
+        ? url
+        : "https://" + url;
+
+    const parsedUrl = new URL(completeUrl);
+
+    if (
+      parsedUrl.protocol !== "http:" &&
+      parsedUrl.protocol !== "https:"
+    ) {
+      return "";
+    }
+
+    return parsedUrl.href;
+  } catch (error) {
+    return "";
+  }
+}
+
+    function escapeHtml(value) {
+      const element = document.createElement("div");
+      element.textContent = String(value || "");
+      return element.innerHTML;
+    }
+  </script>
+</body>
+</html>

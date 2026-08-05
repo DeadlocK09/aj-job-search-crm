@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <style>
+
+    body{
+      font-family:Arial,sans-serif;
+      padding:20px;
+    }
+
+    h2{
+      margin-top:0;
+    }
+
+    label{
+      display:block;
+      margin-top:12px;
+      font-weight:bold;
+    }
+
+    input,
+    select,
+    textarea{
+
+      width:100%;
+      padding:8px;
+      margin-top:5px;
+      box-sizing:border-box;
+
+    }
+
+    button{
+
+      margin-top:20px;
+      width:100%;
+      padding:10px;
+      cursor:pointer;
+
+    }
+
+    button:disabled {
+      background: #9aa0a6;
+      cursor: wait;
+    }
+
+    .job-button {
+      width: 100%;
+      margin-top: 8px;
+      background: #5f6368;
+    }
+
+    .job-button:hover {
+     background: #3c4043;
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<h2>Add Application</h2>
+
+<label>Company *</label>
+<input id="company">
+
+<label>Position *</label>
+<input id="position">
+
+<label>Platform *</label>
+
+<select id="platform">
+
+<option>LinkedIn</option>
+<option>JobStreet</option>
+<option>Indeed</option>
+<option>Company Website</option>
+<option>Referral</option>
+<option>Other</option>
+
+</select>
+
+<label>Location</label>
+<input id="location">
+
+<label>Work Type *</label>
+
+<select id="workType">
+
+<option>Remote</option>
+<option>Hybrid</option>
+<option>On-site</option>
+
+</select>
+
+<label>Notes</label>
+
+<textarea id="notes" rows="5"></textarea>
+
+<button
+  id="saveButton"
+  type="button"
+  onclick="saveApplication()"
+>
+    Save Application
+</button>
+
+<p
+  id="message"
+  style="font-size:12px;color:#5f6368;"
+  aria-live="polite"
+></p>
+
+<script>
+
+let isSaving = false;
+
+function saveApplication() {
+
+    if (isSaving) {
+        return;
+    }
+
+    const button = document.getElementById("saveButton");
+    const message = document.getElementById("message");
+
+    const data = {
+
+        company: document.getElementById("company").value.trim(),
+        position: document.getElementById("position").value.trim(),
+        platform: document.getElementById("platform").value,
+        location: document.getElementById("location").value.trim(),
+        workType: document.getElementById("workType").value,
+        salary: "",
+        jobUrl: "",
+        resumeVersion: "",
+        coverLetter: "No",
+        notes: document.getElementById("notes").value.trim()
+
+    };
+
+    // Validation
+    if (!data.company) {
+        message.textContent = "Company is required.";
+        return;
+    }
+
+    if (!data.position) {
+        message.textContent = "Position is required.";
+        return;
+    }
+
+    isSaving = true;
+    button.disabled = true;
+    button.textContent = "Saving...";
+    message.textContent = "Saving application...";
+
+    google.script.run
+        .withSuccessHandler(function(result){
+
+            message.textContent =
+                "Application " + result.applicationId + " saved.";
+
+            setTimeout(function () {
+                google.script.host.close();
+            }, 600);
+
+        })
+        .withFailureHandler(function(error){
+
+            isSaving = false;
+            button.disabled = false;
+            button.textContent = "Save Application";
+            message.textContent =
+                "Save failed: " + (error.message || error);
+
+        })
+        .saveApplication(data);
+
+}
+
+</script>
+
+</body>
+</html>
