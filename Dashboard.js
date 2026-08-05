@@ -16,6 +16,7 @@ function updateDashboard() {
   }
 
   const totalApplications = Math.max(applications.getLastRow() - 1, 0);
+  const followUpsDue = getFollowUpsDueCount_(applications);
 
   dashboard.clear();
   dashboard.setHiddenGridlines(true);
@@ -69,6 +70,13 @@ buildDashboardCard_(
   statusCounts.rejected
 );
 
+buildDashboardCard_(
+  dashboard,
+  3,
+  7,
+  "Follow-ups Due",
+  followUpsDue
+);
 /**
  * Counts applications by status.
  *
@@ -195,4 +203,61 @@ function buildDashboardCard_(sheet, row, column, title, value) {
     .setFontWeight("bold")
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle");
+}
+
+/**
+ * Counts applications whose follow-up date is today or overdue.
+ *
+ * Follow-up Date: column M
+ * Status: column I
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} applicationsSheet
+ * @returns {number}
+ */
+function getFollowUpsDueCount_(applicationsSheet) {
+  const lastRow = applicationsSheet.getLastRow();
+
+  if (lastRow < 2) {
+    return 0;
+  }
+
+  const rows = applicationsSheet
+    .getRange(2, 1, lastRow - 1, 13)
+    .getValues();
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let count = 0;
+
+  rows.forEach(function (row) {
+    const status = String(row[8] || "")
+      .trim()
+      .toLowerCase();
+
+    const followUpDate = row[12];
+
+    const closedStatuses = [
+      "accepted",
+      "rejected",
+      "withdrawn"
+    ];
+
+    if (closedStatuses.includes(status)) {
+      return;
+    }
+
+    if (!(followUpDate instanceof Date)) {
+      return;
+    }
+
+    const normalizedFollowUpDate = new Date(followUpDate);
+    normalizedFollowUpDate.setHours(0, 0, 0, 0);
+
+    if (normalizedFollowUpDate <= today) {
+      count++;
+    }
+  });
+
+  return count;
 }
