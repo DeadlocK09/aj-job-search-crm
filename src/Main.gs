@@ -4,9 +4,16 @@
  */
 
 function onOpen() {
+  const followUpMenuLabel =
+    getFollowUpMenuLabel_();
+
   SpreadsheetApp.getUi()
     .createMenu("🚀 CareerFlow")
     .addItem("📊 Dashboard", "updateDashboard")
+    .addItem(
+      followUpMenuLabel,
+      "showFollowUpNotifications"
+    )
     .addSeparator()
     .addItem("🔍 Search Applications", "showSearchSidebar")
     .addItem("➕ Add Application", "addApplication")
@@ -18,6 +25,8 @@ function onOpen() {
     .addSeparator()
     .addItem("ℹ️ About", "showAbout")
     .addToUi();
+
+  showFollowUpReminderToast_();
 }
 
 function showAbout() {

@@ -9,6 +9,8 @@ tracking job applications, statuses, follow-up dates, and recent activity.
 - Filter by company, status, platform, and work type
 - Live dashboard totals and recent applications
 - Upcoming and overdue follow-up tracking
+- Dynamic due-follow-up menu count and automatic open reminder
+- Detailed overdue and due-today follow-up alert
 - Canonical dropdown validation for platform, work type, and status
 - Persistent application IDs that are not reused after deletion
 

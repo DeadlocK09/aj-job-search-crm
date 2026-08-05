@@ -26,6 +26,7 @@ function loadServerContext(overrides = {}) {
     "Utils.gs",
     "Applications.gs",
     "Dashboard.gs",
+    "FollowUps.gs",
     "Main.gs",
     "Search.gs",
     "UI.gs"
@@ -234,4 +235,163 @@ test("the Apps Script manifest uses the Manila timezone", () => {
   assert.equal(manifest.timeZone, "Asia/Manila");
   assert.equal(configuredTimeZone, manifest.timeZone);
   assert.equal(manifest.runtimeVersion, "V8");
+});
+
+function getRelativeDate(dayOffset) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  return date;
+}
+
+function getApplicationRow({
+  applicationId,
+  company,
+  position,
+  status,
+  followUpDayOffset
+}) {
+  const row = Array(17).fill("");
+
+  row[0] = applicationId;
+  row[2] = company;
+  row[3] = position;
+  row[8] = status;
+  row[12] = getRelativeDate(followUpDayOffset);
+
+  return row;
+}
+
+function getApplicationsSheetMock(rows) {
+  return {
+    getLastRow() {
+      return rows.length + 1;
+    },
+    getLastColumn() {
+      return 17;
+    },
+    getRange() {
+      return {
+        getValues() {
+          return rows;
+        }
+      };
+    }
+  };
+}
+
+test("follow-up notifications include only overdue and due-today work", () => {
+  const rows = [
+    getApplicationRow({
+      applicationId: "APP-000001",
+      company: "Overdue Company",
+      position: "Support Specialist",
+      status: "Applied",
+      followUpDayOffset: -2
+    }),
+    getApplicationRow({
+      applicationId: "APP-000002",
+      company: "Today Company",
+      position: "IT Administrator",
+      status: "HR Interview",
+      followUpDayOffset: 0
+    }),
+    getApplicationRow({
+      applicationId: "APP-000003",
+      company: "Future Company",
+      position: "Help Desk Analyst",
+      status: "Applied",
+      followUpDayOffset: 1
+    }),
+    getApplicationRow({
+      applicationId: "APP-000004",
+      company: "Closed Company",
+      position: "Systems Analyst",
+      status: "Rejected",
+      followUpDayOffset: -1
+    })
+  ];
+
+  const context = loadServerContext();
+  const summary = context.getFollowUpNotificationSummary_(
+    getApplicationsSheetMock(rows),
+    5
+  );
+
+  assert.equal(summary.total, 2);
+  assert.equal(summary.overdue, 1);
+  assert.equal(summary.dueToday, 1);
+  assert.equal(summary.items.length, 2);
+  assert.equal(summary.items[0].applicationId, "APP-000001");
+  assert.equal(summary.items[1].applicationId, "APP-000002");
+
+  const message = context.buildFollowUpNotificationMessage_(
+    summary
+  );
+
+  assert.match(message, /2 follow-ups need attention/);
+  assert.match(message, /Overdue Company/);
+  assert.match(message, /Today Company/);
+  assert.doesNotMatch(message, /Future Company/);
+  assert.doesNotMatch(message, /Closed Company/);
+});
+
+test("opening the spreadsheet adds the due count and shows one toast", () => {
+  const rows = [
+    getApplicationRow({
+      applicationId: "APP-000001",
+      company: "Reminder Company",
+      position: "IT Support",
+      status: "Applied",
+      followUpDayOffset: 0
+    })
+  ];
+
+  const sheet = getApplicationsSheetMock(rows);
+  const menuLabels = [];
+  const toasts = [];
+
+  const menu = {
+    addItem(label) {
+      menuLabels.push(label);
+      return this;
+    },
+    addSeparator() {
+      return this;
+    },
+    addToUi() {
+      return this;
+    }
+  };
+
+  const spreadsheet = {
+    getSheetByName(name) {
+      return name === "Applications" ? sheet : null;
+    },
+    toast(message, title, duration) {
+      toasts.push({ message, title, duration });
+    }
+  };
+
+  const context = loadServerContext({
+    SpreadsheetApp: {
+      getActiveSpreadsheet() {
+        return spreadsheet;
+      },
+      getUi() {
+        return {
+          createMenu() {
+            return menu;
+          }
+        };
+      }
+    }
+  });
+
+  context.onOpen();
+
+  assert.ok(menuLabels.includes("🔔 Follow-ups Due (1)"));
+  assert.equal(toasts.length, 1);
+  assert.match(toasts[0].message, /1 due today/);
+  assert.equal(toasts[0].duration, 8);
 });

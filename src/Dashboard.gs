@@ -624,6 +624,7 @@ function getUpcomingFollowUps_(sheet, limit) {
       }
 
       return {
+        applicationId: String(row[0] || ""),
         company: String(row[2] || ""),
         position: String(row[3] || ""),
         date: followUpDate,

@@ -28,7 +28,8 @@ other credentials out of Git.
 2. Edit the files in `src/` using Visual Studio Code.
 3. Run `npm test`.
 4. Push with `clasp push`.
-5. Test Add, Search, Edit, Delete, dashboard refresh, and follow-ups in Sheets.
+5. Test Add, Search, Edit, Delete, dashboard refresh, and follow-up reminders
+   in Sheets.
 6. Commit and push the verified Git changes.
 
 ## First deployment of the stability-fixes ZIP
