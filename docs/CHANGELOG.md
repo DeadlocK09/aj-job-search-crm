@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0 - 2026-08-08
+
+- Added an opt-in daily Gmail scan between 8:00 and 9:00 AM Asia/Manila
+- Added email notifications for new application-confirmation candidates
+- Established a baseline at enable time so old candidates do not trigger a
+  notification flood
+- Added scan boundaries that prevent repeated alerts while preserving messages
+  that arrive during a running scan
+- Added one-trigger-only installation and explicit disable controls
+- Added manual Check Now and schedule-status menu commands
+- Added background-safe spreadsheet resolution for time-driven triggers
+- Kept all Gmail imports manual and continued avoiding message modification
+- Added automated trigger, schedule, notification, disabled-state, and
+  background-execution tests
+
 ## 1.2.0 - 2026-08-08
 
 - Added a review-first Gmail scanner for recent application confirmations

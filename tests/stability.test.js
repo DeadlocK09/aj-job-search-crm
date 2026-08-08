@@ -30,6 +30,7 @@ function loadServerContext(overrides = {}) {
     "Dashboard.gs",
     "FollowUps.gs",
     "Gmail.gs",
+    "GmailScheduler.gs",
     "Main.gs",
     "Search.gs",
     "UI.gs"
@@ -578,4 +579,299 @@ test("opening the spreadsheet adds the due count and shows one toast", () => {
   assert.equal(toasts.length, 1);
   assert.match(toasts[0].message, /1 due today/);
   assert.equal(toasts[0].duration, 8);
+});
+
+function createPropertyStore(initialValues = {}) {
+  const values = new Map(
+    Object.entries(initialValues).map(([key, value]) => [
+      key,
+      String(value)
+    ])
+  );
+
+  return {
+    values,
+    getProperty(key) {
+      return values.has(key) ? values.get(key) : null;
+    },
+    setProperty(key, value) {
+      values.set(key, String(value));
+      return this;
+    },
+    setProperties(properties) {
+      Object.entries(properties).forEach(([key, value]) => {
+        values.set(key, String(value));
+      });
+      return this;
+    },
+    deleteProperty(key) {
+      values.delete(key);
+      return this;
+    }
+  };
+}
+
+test("enabling the Gmail schedule replaces duplicate triggers", () => {
+  const userProperties = createPropertyStore();
+  const scriptProperties = createPropertyStore();
+  const deletedHandlers = [];
+  const createdSettings = {};
+  const existingTriggers = [
+    {
+      getHandlerFunction() {
+        return "runScheduledGmailScan";
+      }
+    },
+    {
+      getHandlerFunction() {
+        return "unrelatedTrigger";
+      }
+    }
+  ];
+
+  const triggerBuilder = {
+    timeBased() {
+      return this;
+    },
+    everyDays(value) {
+      createdSettings.everyDays = value;
+      return this;
+    },
+    atHour(value) {
+      createdSettings.atHour = value;
+      return this;
+    },
+    inTimezone(value) {
+      createdSettings.timeZone = value;
+      return this;
+    },
+    create() {
+      return {
+        getUniqueId() {
+          return "trigger-1";
+        }
+      };
+    }
+  };
+
+  const spreadsheet = {
+    getId() {
+      return "spreadsheet-1";
+    },
+    getName() {
+      return "AJ Job Search CRM";
+    }
+  };
+
+  const context = loadServerContext({
+    SpreadsheetApp: {
+      getActiveSpreadsheet() {
+        return spreadsheet;
+      }
+    },
+    PropertiesService: {
+      getUserProperties() {
+        return userProperties;
+      },
+      getScriptProperties() {
+        return scriptProperties;
+      }
+    },
+    ScriptApp: {
+      getProjectTriggers() {
+        return existingTriggers;
+      },
+      deleteTrigger(trigger) {
+        deletedHandlers.push(trigger.getHandlerFunction());
+      },
+      newTrigger(handler) {
+        createdSettings.handler = handler;
+        return triggerBuilder;
+      }
+    }
+  });
+
+  context.getCurrentTimestamp = () =>
+    new Date("2026-08-08T00:00:00.000Z");
+  context.logGmailEvent_ = () => {};
+
+  const result = context.enableScheduledGmailScan("AJ@Example.com");
+
+  assert.deepEqual(deletedHandlers, ["runScheduledGmailScan"]);
+  assert.equal(createdSettings.handler, "runScheduledGmailScan");
+  assert.equal(createdSettings.everyDays, 1);
+  assert.equal(createdSettings.atHour, 8);
+  assert.equal(createdSettings.timeZone, "Asia/Manila");
+  assert.equal(result.notificationEmail, "aj@example.com");
+  assert.equal(
+    userProperties.getProperty("GMAIL_SCHEDULE_TRIGGER_ID"),
+    "trigger-1"
+  );
+  assert.equal(
+    userProperties.getProperty("GMAIL_SCHEDULED_SINCE"),
+    "2026-08-08T00:00:00.000Z"
+  );
+  assert.equal(
+    scriptProperties.getProperty("CAREERFLOW_SPREADSHEET_ID"),
+    "spreadsheet-1"
+  );
+});
+
+test("scheduled Gmail scan emails only candidates newer than its baseline", () => {
+  const userProperties = createPropertyStore({
+    GMAIL_NOTIFICATION_EMAIL: "aj@example.com",
+    GMAIL_SCHEDULED_SINCE: "2026-08-08T00:00:00.000Z"
+  });
+  const sentEmails = [];
+  let lockDepth = 0;
+
+  const context = loadServerContext({
+    PropertiesService: {
+      getUserProperties() {
+        return userProperties;
+      }
+    },
+    LockService: {
+      getUserLock() {
+        return {
+          tryLock() {
+            lockDepth++;
+            return true;
+          },
+          releaseLock() {
+            lockDepth--;
+          }
+        };
+      }
+    },
+    MailApp: {
+      sendEmail(message) {
+        sentEmails.push(message);
+      }
+    },
+    SpreadsheetApp: {
+      getActiveSpreadsheet() {
+        return {
+          getUrl() {
+            return "https://docs.google.com/spreadsheets/d/example";
+          }
+        };
+      }
+    }
+  });
+
+  context.getCurrentTimestamp = () =>
+    new Date("2026-08-08T02:00:00.000Z");
+  context.logGmailEvent_ = () => {};
+  context.scanGmailForApplicationCandidates = () => ({
+    candidates: [
+      {
+        messageId: "old-message",
+        receivedAt: "2026-08-07T23:59:00.000Z",
+        company: "Old Company",
+        position: "Old Role"
+      },
+      {
+        messageId: "new-message",
+        receivedAt: "2026-08-08T01:00:00.000Z",
+        company: "New Company",
+        position: "Support Analyst"
+      },
+      {
+        messageId: "mid-scan-message",
+        receivedAt: "2026-08-08T02:01:00.000Z",
+        company: "Later Company",
+        position: "IT Support"
+      }
+    ]
+  });
+
+  const result = context.runScheduledGmailScan();
+
+  assert.equal(result.newCandidates, 1);
+  assert.equal(result.notificationSent, true);
+  assert.equal(sentEmails.length, 1);
+  assert.equal(sentEmails[0].to, "aj@example.com");
+  assert.match(sentEmails[0].subject, /1 new application email/);
+  assert.match(sentEmails[0].body, /New Company/);
+  assert.doesNotMatch(sentEmails[0].body, /Old Company/);
+  assert.doesNotMatch(sentEmails[0].body, /Later Company/);
+  assert.match(sentEmails[0].body, /Nothing has been imported automatically/);
+  assert.equal(
+    userProperties.getProperty("GMAIL_SCHEDULED_SINCE"),
+    "2026-08-08T02:00:00.000Z"
+  );
+  assert.equal(lockDepth, 0);
+});
+
+test("scheduled Gmail scan does nothing while disabled", () => {
+  const userProperties = createPropertyStore();
+  let scanned = false;
+  let lockReleased = false;
+
+  const context = loadServerContext({
+    PropertiesService: {
+      getUserProperties() {
+        return userProperties;
+      }
+    },
+    LockService: {
+      getUserLock() {
+        return {
+          tryLock() {
+            return true;
+          },
+          releaseLock() {
+            lockReleased = true;
+          }
+        };
+      }
+    }
+  });
+
+  context.scanGmailForApplicationCandidates = () => {
+    scanned = true;
+    return { candidates: [] };
+  };
+
+  const result = context.runScheduledGmailScan();
+
+  assert.equal(result.disabled, true);
+  assert.equal(scanned, false);
+  assert.equal(lockReleased, true);
+});
+
+test("scheduled execution reopens the remembered spreadsheet", () => {
+  const scriptProperties = createPropertyStore({
+    CAREERFLOW_SPREADSHEET_ID: "spreadsheet-remembered"
+  });
+  let openedSpreadsheetId = "";
+  const rememberedSpreadsheet = {
+    getId() {
+      return "spreadsheet-remembered";
+    }
+  };
+
+  const context = loadServerContext({
+    PropertiesService: {
+      getScriptProperties() {
+        return scriptProperties;
+      }
+    },
+    SpreadsheetApp: {
+      getActiveSpreadsheet() {
+        return null;
+      },
+      openById(spreadsheetId) {
+        openedSpreadsheetId = spreadsheetId;
+        return rememberedSpreadsheet;
+      }
+    }
+  });
+
+  assert.equal(
+    context.getCareerFlowSpreadsheet_(),
+    rememberedSpreadsheet
+  );
+  assert.equal(openedSpreadsheetId, "spreadsheet-remembered");
 });

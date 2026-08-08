@@ -11,6 +11,11 @@ Open the connected `AJ Job Search CRM` spreadsheet and use the
 - `📧 Review Gmail Applications` scans recent application-confirmation emails
   and opens editable suggestions. Nothing is imported until you select and
   confirm it.
+- `⏱ Enable Daily Gmail Scan` creates one optional daily notification schedule.
+- `🧪 Check Gmail Scan Now` safely runs the scheduled scan path on demand.
+- `ℹ️ Gmail Scan Status` shows whether the schedule is enabled and summarizes
+  the most recent run.
+- `⏹ Disable Daily Gmail Scan` removes the current user's CareerFlow trigger.
 - `🛠 Repair Data Consistency` normalizes capitalization and spaces, reapplies
   dropdown validation, and synchronizes the persistent ID counter.
 
@@ -40,3 +45,23 @@ not mark messages read, move them, delete them, or apply labels. It also does
 not import automatically. Previously imported Gmail message IDs and existing
 company/position pairs are skipped. Successful imports are recorded on the
 `Logs` tab; full email bodies are not stored.
+
+## Scheduled Gmail notifications
+
+1. Open `🚀 CareerFlow → ⏱ Enable Daily Gmail Scan`.
+2. Confirm the notification account and authorize Google if requested.
+3. CareerFlow creates one daily trigger for the current user. Apps Script runs
+   it sometime between 8:00 and 9:00 AM in the `Asia/Manila` timezone.
+4. When new application-confirmation candidates are found, CareerFlow emails a
+   short list and a link back to the spreadsheet.
+5. Open `Review Gmail Applications` to edit, select, and manually import any
+   candidate you want to track.
+
+The enable time becomes the first scan boundary, so old unimported candidates
+do not produce an initial notification flood. A successful scan advances the
+boundary and does not repeatedly email the same candidates. Messages that
+arrive while a scan is already running remain eligible for the next scan.
+
+`Check Gmail Scan Now` uses the same notification-only path and never imports
+anything. `Disable Daily Gmail Scan` removes all copies of the CareerFlow Gmail
+trigger owned by the current user; manual Gmail Review continues to work.

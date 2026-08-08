@@ -20,7 +20,7 @@ const GMAIL_LOG_HEADERS = [
  * @returns {GoogleAppsScript.Spreadsheet.Sheet}
  */
 function getLogsSheet_() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = getCareerFlowSpreadsheet_();
   let sheet = spreadsheet.getSheetByName(CONFIG.SHEETS.LOGS);
 
   if (!sheet) {
@@ -66,8 +66,7 @@ function logGmailEvent_(event) {
  * @returns {Object<string, boolean>}
  */
 function getImportedGmailMessageIds_() {
-  const sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
+  const sheet = getCareerFlowSpreadsheet_()
     .getSheetByName(CONFIG.SHEETS.LOGS);
 
   if (!sheet) {

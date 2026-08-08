@@ -9,8 +9,7 @@
  * @returns {GoogleAppsScript.Spreadsheet.Sheet}
  */
 function getApplicationsSheet() {
-  const sheet = SpreadsheetApp
-    .getActiveSpreadsheet()
+  const sheet = getCareerFlowSpreadsheet_()
     .getSheetByName(CONFIG.SHEETS.APPLICATIONS);
 
   if (!sheet) {

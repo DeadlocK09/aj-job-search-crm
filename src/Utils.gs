@@ -27,6 +27,57 @@ function getCurrentTimestamp() {
 }
 
 /**
+ * Remembers the bound spreadsheet for time-driven trigger executions.
+ * Scheduled triggers do not always have an active spreadsheet context.
+ *
+ * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
+ */
+function rememberCareerFlowSpreadsheet_() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+
+  if (!spreadsheet) {
+    throw new Error("The CareerFlow spreadsheet is not available.");
+  }
+
+  PropertiesService
+    .getScriptProperties()
+    .setProperty(
+      CONFIG.PROPERTIES.SPREADSHEET_ID,
+      spreadsheet.getId()
+    );
+
+  return spreadsheet;
+}
+
+/**
+ * Returns the active spreadsheet or reopens the remembered spreadsheet when
+ * CareerFlow is running from a time-driven trigger.
+ *
+ * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
+ */
+function getCareerFlowSpreadsheet_() {
+  const activeSpreadsheet =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  if (activeSpreadsheet) {
+    return activeSpreadsheet;
+  }
+
+  const spreadsheetId = PropertiesService
+    .getScriptProperties()
+    .getProperty(CONFIG.PROPERTIES.SPREADSHEET_ID);
+
+  if (!spreadsheetId) {
+    throw new Error(
+      "CareerFlow does not know which spreadsheet to open. " +
+      "Enable the Gmail schedule again from the spreadsheet menu."
+    );
+  }
+
+  return SpreadsheetApp.openById(spreadsheetId);
+}
+
+/**
  * Returns the canonical value from an allowed list.
  * Matching ignores surrounding whitespace and capitalization.
  *

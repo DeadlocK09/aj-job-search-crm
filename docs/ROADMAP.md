@@ -13,13 +13,17 @@
 - Editable, manually confirmed Gmail imports with message-ID and
   company/position duplicate protection
 - Gmail import logging without storing full message bodies
+- Opt-in daily Gmail scan with email notifications for new candidates
+- Trigger enable, status, manual check, and disable controls
+- Background-safe access to the connected spreadsheet
 
 ## Next
 
-1. Verify Gmail parsing against real application-confirmation emails
-2. Gmail phase 2: status-update detection and optional scheduled scan/trigger
-   management, with automatic imports remaining disabled by default
+1. Continue verifying Gmail parsing against more real application-confirmation
+   formats
+2. Gmail phase 3: detect interview, assessment, rejection, and offer updates
+   for manual review before changing an application status
 3. Sprint 9: sidebar and dashboard UI/UX polish
 
-Automatic Gmail imports remain intentionally disabled until the review-first
-workflow has been verified against the user's real email formats.
+Automatic Gmail imports and automatic status changes remain intentionally
+disabled. Email-derived changes continue to require manual review.

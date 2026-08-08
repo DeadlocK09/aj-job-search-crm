@@ -21,6 +21,22 @@ function onOpen() {
       "📧 Review Gmail Applications",
       "showGmailImportSidebar"
     )
+    .addItem(
+      "⏱ Enable Daily Gmail Scan",
+      "enableScheduledGmailScanFromMenu"
+    )
+    .addItem(
+      "🧪 Check Gmail Scan Now",
+      "runScheduledGmailScanNowFromMenu"
+    )
+    .addItem(
+      "ℹ️ Gmail Scan Status",
+      "showGmailScanScheduleStatusFromMenu"
+    )
+    .addItem(
+      "⏹ Disable Daily Gmail Scan",
+      "disableScheduledGmailScanFromMenu"
+    )
     .addSeparator()
     .addItem(
       "🛠 Repair Data Consistency",
