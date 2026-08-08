@@ -11,7 +11,8 @@ const CONFIG = {
     DASHBOARD: "Dashboard",
     COMPANIES: "Companies",
     CONTACTS: "Contacts",
-    INTERVIEWS: "Interviews"
+    INTERVIEWS: "Interviews",
+    LOGS: "Logs"
 
   },
 
@@ -69,10 +70,30 @@ const CONFIG = {
       "LAST_APPLICATION_SEQUENCE"
   },
 
+  GMAIL: {
+    SEARCH_QUERY: [
+      "newer_than:90d",
+      "-in:spam",
+      "-in:trash",
+      "-in:sent",
+      "{",
+      'subject:"application received"',
+      'subject:"application submitted"',
+      'subject:"application confirmation"',
+      'subject:"thank you for applying"',
+      'subject:"we received your application"',
+      'subject:"your application"',
+      "}"
+    ].join(" "),
+    MAX_THREADS: 50,
+    MAX_MESSAGES: 100,
+    MIN_CONFIDENCE: 60
+  },
+
   TIME_ZONE: "Asia/Manila",
 
   ID_PREFIX: "APP",
 
-  VERSION: "1.1.0"
+  VERSION: "1.2.0"
 
 };

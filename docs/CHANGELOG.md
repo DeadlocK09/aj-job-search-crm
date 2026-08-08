@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0 - 2026-08-08
+
+- Added a review-first Gmail scanner for recent application confirmations
+- Added conservative company, position, and platform parsing
+- Added editable candidates that are never preselected
+- Added explicit confirmation before importing any application
+- Added Gmail message-ID and company/position duplicate protection
+- Added import logging without saving full email bodies
+- Added spreadsheet-formula injection protection for imported email text
+- Kept automatic imports and time-driven Gmail triggers disabled by default
+- Added automated parser, scan, duplicate, import, and sidebar safety tests
+
 ## 1.1.0 - 2026-08-06
 
 - Added a live due-follow-up count to the CareerFlow menu

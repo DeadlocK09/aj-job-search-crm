@@ -11,6 +11,9 @@ tracking job applications, statuses, follow-up dates, and recent activity.
 - Upcoming and overdue follow-up tracking
 - Dynamic due-follow-up menu count and automatic open reminder
 - Detailed overdue and due-today follow-up alert
+- Review-first Gmail scanner for application confirmations
+- Editable Gmail import candidates with confirmation and duplicate protection
+- Gmail import activity logging without storing full email bodies
 - Canonical dropdown validation for platform, work type, and status
 - Persistent application IDs that are not reused after deletion
 

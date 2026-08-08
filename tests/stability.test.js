@@ -24,9 +24,12 @@ function loadServerContext(overrides = {}) {
   [
     "Config.gs",
     "Utils.gs",
+    "Logger.gs",
+    "Parser.gs",
     "Applications.gs",
     "Dashboard.gs",
     "FollowUps.gs",
+    "Gmail.gs",
     "Main.gs",
     "Search.gs",
     "UI.gs"
@@ -179,6 +182,7 @@ test("browser-side scripts parse and the Add form has a submit guard", () => {
   const htmlFiles = [
     "AddApplication.html",
     "EditApplicationSidebar.html",
+    "GmailImportSidebar.html",
     "SearchSidebar.html"
   ];
 
@@ -216,6 +220,15 @@ test("browser-side scripts parse and the Add form has a submit guard", () => {
     addForm,
     /Save functionality will be added/
   );
+
+  const gmailReview = fs.readFileSync(
+    path.join(sourceRoot, "GmailImportSidebar.html"),
+    "utf8"
+  );
+
+  assert.match(gmailReview, /checkbox\.checked = false/);
+  assert.match(gmailReview, /window\.confirm/);
+  assert.match(gmailReview, /Nothing is imported automatically/);
 });
 
 test("the Apps Script manifest uses the Manila timezone", () => {
@@ -235,6 +248,177 @@ test("the Apps Script manifest uses the Manila timezone", () => {
   assert.equal(manifest.timeZone, "Asia/Manila");
   assert.equal(configuredTimeZone, manifest.timeZone);
   assert.equal(manifest.runtimeVersion, "V8");
+});
+
+test("Gmail parser extracts a structured application confirmation", () => {
+  const context = loadServerContext();
+  const candidate = context.parseApplicationEmail_({
+    messageId: "gmail-message-1",
+    receivedAt: new Date("2026-08-08T01:00:00Z"),
+    subject:
+      "Thank you for applying for IT Support Specialist at Acme Corporation",
+    from: "Acme Careers <jobs@acme.example>",
+    body:
+      "We received your application. Our recruitment team will review it."
+  });
+
+  assert.ok(candidate);
+  assert.equal(candidate.company, "Acme Corporation");
+  assert.equal(candidate.position, "IT Support Specialist");
+  assert.equal(candidate.platform, "Company Website");
+  assert.equal(candidate.status, "Applied");
+  assert.equal(candidate.needsReview, false);
+  assert.ok(candidate.confidence >= 90);
+});
+
+test("Gmail parser rejects job-alert newsletters", () => {
+  const context = loadServerContext();
+  const candidate = context.parseApplicationEmail_({
+    messageId: "gmail-alert-1",
+    subject: "Job alert: new IT Support jobs for you",
+    from: "Job Board <alerts@example.com>",
+    body:
+      "Recommended jobs. Thank you for applying filters to your search."
+  });
+
+  assert.equal(candidate, null);
+});
+
+test("Gmail scan excludes processed and already-tracked applications", () => {
+  const existingRows = [
+    ["APP-000001", new Date(), "Acme Corporation", "IT Support Specialist"]
+  ];
+
+  const applicationsSheet = {
+    getLastRow() {
+      return existingRows.length + 1;
+    },
+    getRange() {
+      return {
+        getValues() {
+          return existingRows;
+        }
+      };
+    }
+  };
+
+  function createMessage(id, subject, sender, day) {
+    return {
+      getId() {
+        return id;
+      },
+      getDate() {
+        return new Date(2026, 7, day, 9, 0, 0);
+      },
+      getSubject() {
+        return subject;
+      },
+      getFrom() {
+        return sender;
+      },
+      getPlainBody() {
+        return "We received your application.";
+      }
+    };
+  }
+
+  const messages = [
+    createMessage(
+      "existing-message",
+      "Application received for IT Support Specialist at Acme Corporation",
+      "Acme Careers <jobs@acme.example>",
+      8
+    ),
+    createMessage(
+      "new-message",
+      "Application received for Service Desk Analyst at Beta Corp",
+      "Beta Careers <jobs@beta.example>",
+      7
+    ),
+    createMessage(
+      "processed-message",
+      "Application received for Systems Analyst at Gamma Ltd",
+      "Gamma Careers <jobs@gamma.example>",
+      6
+    )
+  ];
+
+  const context = loadServerContext({
+    GmailApp: {
+      search() {
+        return [{
+          getMessages() {
+            return messages;
+          }
+        }];
+      }
+    }
+  });
+
+  context.getApplicationsSheet = () => applicationsSheet;
+  context.getImportedGmailMessageIds_ = () => ({
+    "processed-message": true
+  });
+
+  const result = context.scanGmailForApplicationCandidates();
+
+  assert.equal(result.summary.messagesReviewed, 3);
+  assert.equal(result.summary.alreadyImported, 1);
+  assert.equal(result.summary.alreadyTracked, 1);
+  assert.equal(result.summary.candidatesFound, 1);
+  assert.equal(result.candidates[0].messageId, "new-message");
+  assert.equal(result.candidates[0].company, "Beta Corp");
+});
+
+test("reviewed Gmail import sanitizes formulas and updates once", () => {
+  const appendedRows = [];
+  const logEvents = [];
+  let dashboardUpdates = 0;
+
+  const applicationsSheet = {
+    getLastRow() {
+      return 1;
+    },
+    appendRow(row) {
+      appendedRows.push(row);
+    }
+  };
+
+  const context = loadServerContext();
+
+  context.getApplicationsSheet = () => applicationsSheet;
+  context.getImportedGmailMessageIds_ = () => ({});
+  context.getNextApplicationId_ = () => "APP-000007";
+  context.getCurrentTimestamp = () =>
+    new Date("2026-08-08T02:00:00Z");
+  context.updateDashboard = () => {
+    dashboardUpdates++;
+  };
+  context.logGmailEvent_ = (event) => {
+    logEvents.push(event);
+  };
+
+  const result = context.importGmailApplicationCandidates([{
+    messageId: "gmail-message-7",
+    receivedAt: "2026-08-07T03:00:00.000Z",
+    subject: "Application received",
+    sender: "Example Careers <jobs@example.com>",
+    company: "=Unsafe Formula",
+    position: "Support Analyst",
+    platform: "Company Website",
+    workType: "Remote"
+  }]);
+
+  assert.equal(result.imported.length, 1);
+  assert.equal(result.imported[0].applicationId, "APP-000007");
+  assert.equal(appendedRows.length, 1);
+  assert.equal(appendedRows[0][2], "'=Unsafe Formula");
+  assert.equal(appendedRows[0][3], "Support Analyst");
+  assert.equal(appendedRows[0][8], "Applied");
+  assert.match(appendedRows[0][15], /Gmail message ID: gmail-message-7/);
+  assert.equal(dashboardUpdates, 1);
+  assert.equal(logEvents.length, 1);
+  assert.equal(logEvents[0].action, "GMAIL_IMPORTED");
 });
 
 function getRelativeDate(dayOffset) {

@@ -32,6 +32,14 @@ other credentials out of Git.
    in Sheets.
 6. Commit and push the verified Git changes.
 
+## Gmail authorization
+
+The first use of `Review Gmail Applications` may display a Google authorization
+prompt because the script now reads Gmail messages that match the configured
+search. Complete authorization using the same Google account that owns the CRM.
+CareerFlow does not modify Gmail messages and does not install an automatic
+Gmail trigger in version 1.2.0.
+
 ## First deployment of the stability-fixes ZIP
 
 Extract the ZIP into a separate folder, open that folder in Visual Studio Code,

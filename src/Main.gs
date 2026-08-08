@@ -17,6 +17,10 @@ function onOpen() {
     .addSeparator()
     .addItem("🔍 Search Applications", "showSearchSidebar")
     .addItem("➕ Add Application", "addApplication")
+    .addItem(
+      "📧 Review Gmail Applications",
+      "showGmailImportSidebar"
+    )
     .addSeparator()
     .addItem(
       "🛠 Repair Data Consistency",

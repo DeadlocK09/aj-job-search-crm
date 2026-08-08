@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 18px;
+      font-family: Arial, sans-serif;
+      color: #202124;
+      background: #ffffff;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      color: #1a73e8;
+    }
+
+    .intro,
+    .message,
+    .summary,
+    .empty {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #5f6368;
+    }
+
+    .privacy-note {
+      margin: 12px 0;
+      padding: 10px;
+      border-left: 4px solid #1a73e8;
+      background: #e8f0fe;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .summary {
+      margin: 12px 0;
+      padding: 10px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      background: #f8f9fa;
+    }
+
+    .card {
+      margin: 12px 0;
+      padding: 12px;
+      border: 1px solid #dadce0;
+      border-radius: 7px;
+      background: #ffffff;
+    }
+
+    .card.needs-review {
+      border-color: #f9ab00;
+      background: #fff8e1;
+    }
+
+    .select-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    .select-row input {
+      width: auto;
+      margin: 0;
+    }
+
+    .email-details {
+      margin-bottom: 10px;
+      font-size: 11px;
+      line-height: 1.45;
+      color: #5f6368;
+      overflow-wrap: anywhere;
+    }
+
+    .confidence {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: #e6f4ea;
+      color: #137333;
+      font-weight: bold;
+    }
+
+    label {
+      display: block;
+      margin-top: 9px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    input,
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      background: #ffffff;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #1a73e8;
+      color: #ffffff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #5f6368;
+    }
+
+    button:disabled {
+      background: #9aa0a6;
+      cursor: wait;
+    }
+
+    .message {
+      margin-top: 10px;
+      min-height: 18px;
+    }
+
+    .message.error {
+      color: #b3261e;
+    }
+
+    .message.success {
+      color: #137333;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>📧 Review Gmail Applications</h2>
+
+  <div class="intro">
+    CareerFlow searches recent application-confirmation emails and prepares
+    editable suggestions.
+  </div>
+
+  <div class="privacy-note">
+    Nothing is imported automatically. Select each application, review the
+    company, position, platform, and work type, then confirm the import.
+    CareerFlow does not mark, delete, move, or label Gmail messages.
+  </div>
+
+  <button id="scanButton" class="secondary" type="button">
+    Scan Gmail
+  </button>
+
+  <div id="message" class="message" aria-live="polite"></div>
+  <div id="summary" class="summary" hidden></div>
+  <div id="results"></div>
+
+  <button id="importButton" type="button" disabled>
+    Import Selected Applications
+  </button>
+
+  <script>
+    let candidates = [];
+    let isBusy = false;
+
+    document
+      .getElementById("scanButton")
+      .addEventListener("click", function () {
+        loadCandidates("");
+      });
+
+    document
+      .getElementById("importButton")
+      .addEventListener("click", importSelectedCandidates);
+
+    loadCandidates("");
+
+    function loadCandidates(successMessage) {
+      if (isBusy) {
+        return;
+      }
+
+      setBusy(true, "Scanning recent Gmail messages...");
+      clearResults();
+
+      google.script.run
+        .withSuccessHandler(function (result) {
+          candidates = result.candidates || [];
+          renderSummary(result.summary || {});
+          renderCandidates();
+          setBusy(false, successMessage || getScanMessage(candidates.length));
+
+          if (successMessage) {
+            setMessage(successMessage, "success");
+          }
+        })
+        .withFailureHandler(function (error) {
+          setBusy(false, "");
+          setMessage(
+            "Gmail scan failed: " + (error.message || error),
+            "error"
+          );
+        })
+        .scanGmailForApplicationCandidates();
+    }
+
+    function clearResults() {
+      candidates = [];
+      document.getElementById("results").textContent = "";
+      document.getElementById("summary").hidden = true;
+      document.getElementById("importButton").disabled = true;
+    }
+
+    function renderSummary(summary) {
+      const container = document.getElementById("summary");
+      const parts = [
+        "Messages reviewed: " + (summary.messagesReviewed || 0),
+        "Candidates: " + (summary.candidatesFound || 0),
+        "Already imported: " + (summary.alreadyImported || 0),
+        "Already tracked: " + (summary.alreadyTracked || 0),
+        "Not recognized: " + (summary.notRecognized || 0)
+      ];
+
+      container.textContent = parts.join(" • ");
+      container.hidden = false;
+    }
+
+    function renderCandidates() {
+      const results = document.getElementById("results");
+      results.textContent = "";
+
+      if (candidates.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent =
+          "No new application confirmations are ready for review.";
+        results.appendChild(empty);
+        updateImportButton();
+        return;
+      }
+
+      candidates.forEach(function (candidate, index) {
+        results.appendChild(createCandidateCard(candidate, index));
+      });
+
+      updateImportButton();
+    }
+
+    function createCandidateCard(candidate, index) {
+      const card = document.createElement("div");
+      card.className = candidate.needsReview
+        ? "card needs-review"
+        : "card";
+
+      const selectRow = document.createElement("label");
+      selectRow.className = "select-row";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.id = "select-" + index;
+      checkbox.checked = false;
+      checkbox.addEventListener("change", updateImportButton);
+
+      const selectText = document.createElement("span");
+      selectText.textContent = candidate.needsReview
+        ? "Select after completing missing details"
+        : "Select this application";
+
+      selectRow.appendChild(checkbox);
+      selectRow.appendChild(selectText);
+      card.appendChild(selectRow);
+
+      const details = document.createElement("div");
+      details.className = "email-details";
+
+      const received = candidate.receivedAt
+        ? new Date(candidate.receivedAt).toLocaleString()
+        : "Unknown date";
+
+      details.appendChild(createTextLine("Received: ", received));
+      details.appendChild(createTextLine("From: ", candidate.sender));
+      details.appendChild(createTextLine("Subject: ", candidate.subject));
+
+      const confidence = document.createElement("span");
+      confidence.className = "confidence";
+      confidence.textContent =
+        "Parser confidence: " + candidate.confidence + "%";
+      details.appendChild(confidence);
+      card.appendChild(details);
+
+      card.appendChild(createFieldLabel("Company *", "company-" + index));
+      card.appendChild(createTextInput(
+        "company-" + index,
+        candidate.company
+      ));
+
+      card.appendChild(createFieldLabel("Position *", "position-" + index));
+      card.appendChild(createTextInput(
+        "position-" + index,
+        candidate.position
+      ));
+
+      card.appendChild(createFieldLabel("Platform *", "platform-" + index));
+      card.appendChild(createSelect(
+        "platform-" + index,
+        [
+          "LinkedIn",
+          "JobStreet",
+          "Indeed",
+          "Company Website",
+          "Referral",
+          "Other"
+        ],
+        candidate.platform,
+        false
+      ));
+
+      card.appendChild(createFieldLabel("Work Type *", "workType-" + index));
+      card.appendChild(createSelect(
+        "workType-" + index,
+        ["Remote", "Hybrid", "On-site"],
+        "",
+        true
+      ));
+
+      return card;
+    }
+
+    function createTextLine(label, value) {
+      const line = document.createElement("div");
+      const strong = document.createElement("strong");
+      strong.textContent = label;
+      line.appendChild(strong);
+      line.appendChild(document.createTextNode(String(value || "")));
+      return line;
+    }
+
+    function createFieldLabel(text, targetId) {
+      const label = document.createElement("label");
+      label.htmlFor = targetId;
+      label.textContent = text;
+      return label;
+    }
+
+    function createTextInput(id, value) {
+      const input = document.createElement("input");
+      input.id = id;
+      input.type = "text";
+      input.value = String(value || "");
+      input.maxLength = 160;
+      return input;
+    }
+
+    function createSelect(id, values, selectedValue, includePlaceholder) {
+      const select = document.createElement("select");
+      select.id = id;
+
+      if (includePlaceholder) {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Choose...";
+        select.appendChild(placeholder);
+      }
+
+      values.forEach(function (value) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        option.selected = value === selectedValue;
+        select.appendChild(option);
+      });
+
+      return select;
+    }
+
+    function updateImportButton() {
+      const anySelected = candidates.some(function (candidate, index) {
+        const checkbox = document.getElementById("select-" + index);
+        return checkbox && checkbox.checked;
+      });
+
+      document.getElementById("importButton").disabled =
+        isBusy || !anySelected;
+    }
+
+    function importSelectedCandidates() {
+      if (isBusy) {
+        return;
+      }
+
+      const selected = [];
+      let validationError = "";
+
+      candidates.forEach(function (candidate, index) {
+        const checkbox = document.getElementById("select-" + index);
+
+        if (!checkbox || !checkbox.checked) {
+          return;
+        }
+
+        const company = document
+          .getElementById("company-" + index)
+          .value
+          .trim();
+        const position = document
+          .getElementById("position-" + index)
+          .value
+          .trim();
+        const workType = document
+          .getElementById("workType-" + index)
+          .value;
+
+        if (!company || !position || !workType) {
+          validationError =
+            "Complete company, position, and work type for every selected application.";
+          return;
+        }
+
+        selected.push({
+          messageId: candidate.messageId,
+          receivedAt: candidate.receivedAt,
+          subject: candidate.subject,
+          sender: candidate.sender,
+          company: company,
+          position: position,
+          platform: document
+            .getElementById("platform-" + index)
+            .value,
+          workType: workType
+        });
+      });
+
+      if (validationError) {
+        setMessage(validationError, "error");
+        return;
+      }
+
+      if (selected.length === 0) {
+        setMessage("Select at least one application.", "error");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Import " + selected.length +
+          (selected.length === 1 ? " application" : " applications") +
+          " into CareerFlow?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setBusy(true, "Importing selected applications...");
+
+      google.script.run
+        .withSuccessHandler(function (result) {
+          const importedCount = (result.imported || []).length;
+          const duplicateCount = (result.duplicates || []).length;
+          const errorCount = (result.errors || []).length;
+
+          const parts = [
+            importedCount + " imported"
+          ];
+
+          if (duplicateCount) {
+            parts.push(duplicateCount + " skipped as duplicate");
+          }
+
+          if (errorCount) {
+            parts.push(errorCount + " failed");
+          }
+
+          if (result.loggingWarnings) {
+            parts.push(result.loggingWarnings + " logging warning(s)");
+          }
+
+          isBusy = false;
+          loadCandidates(parts.join(" • ") + ".");
+        })
+        .withFailureHandler(function (error) {
+          setBusy(false, "");
+          setMessage(
+            "Import failed: " + (error.message || error),
+            "error"
+          );
+        })
+        .importGmailApplicationCandidates(selected);
+    }
+
+    function getScanMessage(candidateCount) {
+      return candidateCount === 0
+        ? "Scan complete. No new candidates found."
+        : "Scan complete. Review and select the applications to import.";
+    }
+
+    function setBusy(busy, message) {
+      isBusy = busy;
+      document.getElementById("scanButton").disabled = busy;
+      updateImportButton();
+      setMessage(message || "", "");
+    }
+
+    function setMessage(message, type) {
+      const element = document.getElementById("message");
+      element.className = "message" + (type ? " " + type : "");
+      element.textContent = message;
+    }
+  </script>
+</body>
+</html>

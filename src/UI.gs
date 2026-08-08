@@ -26,11 +26,19 @@ function addApplication() {
 }
 
 function scanGmail() {
+  showGmailImportSidebar();
+}
 
-  SpreadsheetApp
-    .getUi()
-    .alert("Coming Soon!\n\nScanning Gmail...");
+/**
+ * Opens the review-first Gmail import sidebar.
+ * Scanning does not modify Gmail or the Applications sheet.
+ */
+function showGmailImportSidebar() {
+  const html = HtmlService
+    .createHtmlOutputFromFile("GmailImportSidebar")
+    .setTitle("Review Gmail Applications");
 
+  SpreadsheetApp.getUi().showSidebar(html);
 }
 
 
