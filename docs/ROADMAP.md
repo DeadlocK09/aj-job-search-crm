@@ -16,14 +16,19 @@
 - Opt-in daily Gmail scan with email notifications for new candidates
 - Trigger enable, status, manual check, and disable controls
 - Background-safe access to the connected spreadsheet
+- Review-first Gmail status update detection for assessment, interview, offer,
+  and rejection messages
+- Conservative existing-application matching with manual status confirmation
+- Stale-review, duplicate-message, backward-transition, and closed-status
+  protection
+- Status change logging without storing full email bodies
 
 ## Next
 
 1. Continue verifying Gmail parsing against more real application-confirmation
-   formats
-2. Gmail phase 3: detect interview, assessment, rejection, and offer updates
-   for manual review before changing an application status
-3. Sprint 9: sidebar and dashboard UI/UX polish
+   and hiring-status formats
+2. Sprint 9: sidebar and dashboard UI/UX polish
+3. Add optional reporting and analytics views after the interface refresh
 
 Automatic Gmail imports and automatic status changes remain intentionally
 disabled. Email-derived changes continue to require manual review.

@@ -98,6 +98,36 @@ const CONFIG = {
     MAX_THREADS: 50,
     MAX_MESSAGES: 100,
     MIN_CONFIDENCE: 60,
+    STATUS_SEARCH_QUERY: [
+      "newer_than:180d",
+      "-in:spam",
+      "-in:trash",
+      "-in:sent",
+      "{",
+      "subject:interview",
+      "subject:assessment",
+      'subject:"skills test"',
+      'subject:"technical test"',
+      'subject:"coding challenge"',
+      "subject:offer",
+      'subject:"application update"',
+      'subject:"next step"',
+      'subject:"next steps"',
+      'subject:"not selected"',
+      'subject:"not moving forward"',
+      "subject:unfortunately",
+      "}"
+    ].join(" "),
+    STATUS_MIN_MATCH_SCORE: 70,
+    STATUS_UPDATE_VALUES: [
+      "Assessment",
+      "Interview",
+      "HR Interview",
+      "Technical Interview",
+      "Final Interview",
+      "Offer",
+      "Rejected"
+    ],
     SCHEDULE_HANDLER: "runScheduledGmailScan",
     SCHEDULE_HOUR: 8,
     NOTIFICATION_MAX_ITEMS: 10
@@ -107,6 +137,6 @@ const CONFIG = {
 
   ID_PREFIX: "APP",
 
-  VERSION: "1.3.0"
+  VERSION: "1.4.0"
 
 };

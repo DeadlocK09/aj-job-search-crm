@@ -44,6 +44,11 @@ Google may request authorization to manage the trigger and send notification
 emails. The schedule runs once per day between 8:00 and 9:00 AM Asia/Manila.
 Use `Disable Daily Gmail Scan` to remove it. Automatic imports remain disabled.
 
+Version 1.4.0 adds a separate manual Gmail status-review scan. It uses the
+existing Gmail read permission and does not add a status-update trigger. The
+scan never changes an application. A status changes only after you select a
+matched suggestion and confirm it in the sidebar.
+
 ## First deployment of the stability-fixes ZIP
 
 Extract the ZIP into a separate folder, open that folder in Visual Studio Code,

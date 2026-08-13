@@ -11,6 +11,9 @@ Open the connected `AJ Job Search CRM` spreadsheet and use the
 - `📧 Review Gmail Applications` scans recent application-confirmation emails
   and opens editable suggestions. Nothing is imported until you select and
   confirm it.
+- `📨 Review Gmail Status Updates` scans hiring-process emails, matches safe
+  suggestions to existing applications, and requires confirmation before a
+  status changes.
 - `⏱ Enable Daily Gmail Scan` creates one optional daily notification schedule.
 - `🧪 Check Gmail Scan Now` safely runs the scheduled scan path on demand.
 - `ℹ️ Gmail Scan Status` shows whether the schedule is enabled and summarizes
@@ -65,3 +68,24 @@ arrive while a scan is already running remain eligible for the next scan.
 `Check Gmail Scan Now` uses the same notification-only path and never imports
 anything. `Disable Daily Gmail Scan` removes all copies of the CareerFlow Gmail
 trigger owned by the current user; manual Gmail Review continues to work.
+
+## Gmail status update review
+
+1. Open `🚀 CareerFlow → 📨 Review Gmail Status Updates`.
+2. Review the scan totals. Unmatched, ambiguous, already processed, unchanged,
+   and unsafe messages are excluded from the selectable suggestions.
+3. Check the application ID, company, position, current status, proposed
+   status, and confidence indicators on each card.
+4. Select only the status changes you recognize. Correct the proposed interview
+   stage when necessary.
+5. Click `Apply Selected Status Updates` and confirm the count.
+
+Every suggestion starts unselected. Before applying a change, CareerFlow
+rechecks the application's current status. It blocks the update if the CRM was
+changed after the scan, if the proposed change moves backward, or if the
+application is already Accepted, Rejected, or Withdrawn. Successful updates
+change only the Status and Last Updated fields, rebuild the dashboard, and log
+the old and new status without storing the email body.
+
+The status-review scanner does not mark Gmail messages read, move them, delete
+them, or apply labels. Status changes are never automatic.

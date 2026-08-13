@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 18px;
+      font-family: Arial, sans-serif;
+      color: #202124;
+      background: #ffffff;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      color: #1a73e8;
+    }
+
+    .intro,
+    .message,
+    .summary,
+    .empty {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #5f6368;
+    }
+
+    .privacy-note {
+      margin: 12px 0;
+      padding: 10px;
+      border-left: 4px solid #1a73e8;
+      background: #e8f0fe;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .summary {
+      margin: 12px 0;
+      padding: 10px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      background: #f8f9fa;
+    }
+
+    .card {
+      margin: 12px 0;
+      padding: 12px;
+      border: 1px solid #dadce0;
+      border-radius: 7px;
+      background: #ffffff;
+    }
+
+    .card.needs-review {
+      border-color: #f9ab00;
+      background: #fff8e1;
+    }
+
+    .select-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    .select-row input {
+      width: auto;
+      margin: 0;
+    }
+
+    .application {
+      margin: 8px 0;
+      padding: 9px;
+      border-radius: 5px;
+      background: #f8f9fa;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .email-details {
+      margin-bottom: 10px;
+      font-size: 11px;
+      line-height: 1.45;
+      color: #5f6368;
+      overflow-wrap: anywhere;
+    }
+
+    .confidence {
+      display: inline-block;
+      margin: 5px 5px 0 0;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: #e6f4ea;
+      color: #137333;
+      font-weight: bold;
+    }
+
+    .status-change {
+      margin: 10px 0;
+      color: #137333;
+      font-weight: bold;
+    }
+
+    label.field-label {
+      display: block;
+      margin-top: 9px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      background: #ffffff;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #1a73e8;
+      color: #ffffff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #5f6368;
+    }
+
+    button:disabled {
+      background: #9aa0a6;
+      cursor: wait;
+    }
+
+    .message {
+      margin-top: 10px;
+      min-height: 18px;
+    }
+
+    .message.error {
+      color: #b3261e;
+    }
+
+    .message.success {
+      color: #137333;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>📨 Review Gmail Status Updates</h2>
+
+  <div class="intro">
+    CareerFlow looks for assessment, interview, offer, and rejection emails,
+    then matches them to applications already in your CRM.
+  </div>
+
+  <div class="privacy-note">
+    Nothing is updated automatically. Every suggestion starts unselected.
+    Review the matched application and proposed status before confirming.
+    CareerFlow does not mark, delete, move, or label Gmail messages.
+  </div>
+
+  <button id="scanButton" class="secondary" type="button">
+    Scan Gmail for Status Updates
+  </button>
+
+  <div id="message" class="message" aria-live="polite"></div>
+  <div id="summary" class="summary" hidden></div>
+  <div id="results"></div>
+
+  <button id="updateButton" type="button" disabled>
+    Apply Selected Status Updates
+  </button>
+
+  <script>
+    let candidates = [];
+    let isBusy = false;
+
+    const statusValues = [
+      "Assessment",
+      "Interview",
+      "HR Interview",
+      "Technical Interview",
+      "Final Interview",
+      "Offer",
+      "Rejected"
+    ];
+
+    document
+      .getElementById("scanButton")
+      .addEventListener("click", function () {
+        loadCandidates("");
+      });
+
+    document
+      .getElementById("updateButton")
+      .addEventListener("click", applySelectedCandidates);
+
+    loadCandidates("");
+
+    function loadCandidates(successMessage) {
+      if (isBusy) {
+        return;
+      }
+
+      setBusy(true, "Scanning Gmail for status updates...");
+      clearResults();
+
+      google.script.run
+        .withSuccessHandler(function (result) {
+          candidates = result.candidates || [];
+          renderSummary(result.summary || {});
+          renderCandidates();
+          setBusy(false, successMessage || getScanMessage(candidates.length));
+
+          if (successMessage) {
+            setMessage(successMessage, "success");
+          }
+        })
+        .withFailureHandler(function (error) {
+          setBusy(false, "");
+          setMessage(
+            "Gmail status scan failed: " + (error.message || error),
+            "error"
+          );
+        })
+        .scanGmailForStatusUpdateCandidates();
+    }
+
+    function clearResults() {
+      candidates = [];
+      document.getElementById("results").textContent = "";
+      document.getElementById("summary").hidden = true;
+      document.getElementById("updateButton").disabled = true;
+    }
+
+    function renderSummary(summary) {
+      const container = document.getElementById("summary");
+      const parts = [
+        "Messages reviewed: " + (summary.messagesReviewed || 0),
+        "Suggestions: " + (summary.candidatesFound || 0),
+        "Already processed: " + (summary.alreadyProcessed || 0),
+        "Unmatched: " + (summary.unmatched || 0),
+        "Ambiguous: " + (summary.ambiguous || 0),
+        "Unchanged or unsafe: " + (summary.unchangedOrUnsafe || 0),
+        "Not a status update: " + (summary.notStatusUpdate || 0)
+      ];
+
+      container.textContent = parts.join(" • ");
+      container.hidden = false;
+    }
+
+    function renderCandidates() {
+      const results = document.getElementById("results");
+      results.textContent = "";
+
+      if (candidates.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent =
+          "No safe Gmail status suggestions are ready for review.";
+        results.appendChild(empty);
+        updateActionButton();
+        return;
+      }
+
+      candidates.forEach(function (candidate, index) {
+        results.appendChild(createCandidateCard(candidate, index));
+      });
+
+      updateActionButton();
+    }
+
+    function createCandidateCard(candidate, index) {
+      const card = document.createElement("div");
+      card.className = candidate.needsReview
+        ? "card needs-review"
+        : "card";
+
+      const selectRow = document.createElement("label");
+      selectRow.className = "select-row";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.id = "select-" + index;
+      checkbox.checked = false;
+      checkbox.addEventListener("change", updateActionButton);
+
+      const selectText = document.createElement("span");
+      selectText.textContent = candidate.needsReview
+        ? "Select after carefully reviewing this match"
+        : "Select this status update";
+
+      selectRow.appendChild(checkbox);
+      selectRow.appendChild(selectText);
+      card.appendChild(selectRow);
+
+      const application = document.createElement("div");
+      application.className = "application";
+      application.appendChild(createTextLine(
+        "Application: ",
+        candidate.applicationId
+      ));
+      application.appendChild(createTextLine(
+        "Company: ",
+        candidate.company
+      ));
+      application.appendChild(createTextLine(
+        "Position: ",
+        candidate.position
+      ));
+      card.appendChild(application);
+
+      const details = document.createElement("div");
+      details.className = "email-details";
+      const received = candidate.receivedAt
+        ? new Date(candidate.receivedAt).toLocaleString()
+        : "Unknown date";
+
+      details.appendChild(createTextLine("Received: ", received));
+      details.appendChild(createTextLine("From: ", candidate.sender));
+      details.appendChild(createTextLine("Subject: ", candidate.subject));
+      details.appendChild(createTextLine("Detected phrase: ", candidate.evidence));
+
+      const parserConfidence = document.createElement("span");
+      parserConfidence.className = "confidence";
+      parserConfidence.textContent =
+        "Status confidence: " + candidate.parserConfidence + "%";
+      details.appendChild(parserConfidence);
+
+      const matchConfidence = document.createElement("span");
+      matchConfidence.className = "confidence";
+      matchConfidence.textContent =
+        "Match confidence: " + candidate.matchConfidence + "%";
+      details.appendChild(matchConfidence);
+      card.appendChild(details);
+
+      const statusChange = document.createElement("div");
+      statusChange.className = "status-change";
+      statusChange.textContent =
+        candidate.currentStatus + " → " + candidate.proposedStatus;
+      card.appendChild(statusChange);
+
+      const fieldLabel = document.createElement("label");
+      fieldLabel.className = "field-label";
+      fieldLabel.htmlFor = "status-" + index;
+      fieldLabel.textContent = "Confirmed new status";
+      card.appendChild(fieldLabel);
+
+      card.appendChild(createStatusSelect(
+        "status-" + index,
+        candidate.proposedStatus
+      ));
+
+      return card;
+    }
+
+    function createTextLine(label, value) {
+      const line = document.createElement("div");
+      const strong = document.createElement("strong");
+      strong.textContent = label;
+      line.appendChild(strong);
+      line.appendChild(document.createTextNode(String(value || "")));
+      return line;
+    }
+
+    function createStatusSelect(id, selectedValue) {
+      const select = document.createElement("select");
+      select.id = id;
+
+      statusValues.forEach(function (status) {
+        const option = document.createElement("option");
+        option.value = status;
+        option.textContent = status;
+        option.selected = status === selectedValue;
+        select.appendChild(option);
+      });
+
+      return select;
+    }
+
+    function updateActionButton() {
+      const anySelected = candidates.some(function (candidate, index) {
+        const checkbox = document.getElementById("select-" + index);
+        return checkbox && checkbox.checked;
+      });
+
+      document.getElementById("updateButton").disabled =
+        isBusy || !anySelected;
+    }
+
+    function applySelectedCandidates() {
+      if (isBusy) {
+        return;
+      }
+
+      const selected = [];
+
+      candidates.forEach(function (candidate, index) {
+        const checkbox = document.getElementById("select-" + index);
+
+        if (!checkbox || !checkbox.checked) {
+          return;
+        }
+
+        selected.push({
+          messageId: candidate.messageId,
+          applicationId: candidate.applicationId,
+          currentStatus: candidate.currentStatus,
+          proposedStatus: document
+            .getElementById("status-" + index)
+            .value
+        });
+      });
+
+      if (selected.length === 0) {
+        setMessage("Select at least one status update.", "error");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Apply " + selected.length +
+          (selected.length === 1 ? " status update" : " status updates") +
+          " to CareerFlow?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setBusy(true, "Applying selected status updates...");
+
+      google.script.run
+        .withSuccessHandler(function (result) {
+          const updatedCount = (result.updated || []).length;
+          const duplicateCount = (result.duplicates || []).length;
+          const unchangedCount = (result.unchanged || []).length;
+          const errorCount = (result.errors || []).length;
+          const parts = [updatedCount + " updated"];
+
+          if (duplicateCount) {
+            parts.push(duplicateCount + " already processed");
+          }
+
+          if (unchangedCount) {
+            parts.push(unchangedCount + " unchanged");
+          }
+
+          if (errorCount) {
+            parts.push(errorCount + " blocked or failed");
+          }
+
+          if (result.loggingWarnings) {
+            parts.push(result.loggingWarnings + " logging warning(s)");
+          }
+
+          isBusy = false;
+          loadCandidates(parts.join(" • ") + ".");
+        })
+        .withFailureHandler(function (error) {
+          setBusy(false, "");
+          setMessage(
+            "Status update failed: " + (error.message || error),
+            "error"
+          );
+        })
+        .applyGmailStatusUpdateCandidates(selected);
+    }
+
+    function getScanMessage(candidateCount) {
+      return candidateCount === 0
+        ? "Scan complete. No safe status suggestions found."
+        : "Scan complete. Review and select status changes to apply.";
+    }
+
+    function setBusy(busy, message) {
+      isBusy = busy;
+      document.getElementById("scanButton").disabled = busy;
+      updateActionButton();
+      setMessage(message || "", "");
+    }
+
+    function setMessage(message, type) {
+      const element = document.getElementById("message");
+      element.className = "message" + (type ? " " + type : "");
+      element.textContent = message;
+    }
+  </script>
+</body>
+</html>

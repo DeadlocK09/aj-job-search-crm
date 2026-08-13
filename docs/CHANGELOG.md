@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.4.0 - 2026-08-08
+
+- Added a separate Gmail Status Update Review sidebar
+- Added conservative detection of assessment, interview, offer, and rejection
+  messages
+- Added exact application matching with ambiguous and unmatched email safety
+  exclusions
+- Added editable proposed statuses that start unselected and require explicit
+  confirmation
+- Added stale-review checks so a later manual CRM change is never overwritten
+- Blocked backward pipeline changes and all changes to closed applications
+- Added processed-message protection and old/new status activity logging
+- Kept Gmail messages read-only and automatic status changes disabled
+- Added parser, matching, update, duplicate, stale-state, closed-state, menu,
+  and sidebar safety tests
+
 ## 1.3.0 - 2026-08-08
 
 - Added an opt-in daily Gmail scan between 8:00 and 9:00 AM Asia/Manila

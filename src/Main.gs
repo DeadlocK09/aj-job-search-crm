@@ -22,6 +22,10 @@ function onOpen() {
       "showGmailImportSidebar"
     )
     .addItem(
+      "📨 Review Gmail Status Updates",
+      "showGmailStatusUpdateSidebar"
+    )
+    .addItem(
       "⏱ Enable Daily Gmail Scan",
       "enableScheduledGmailScanFromMenu"
     )

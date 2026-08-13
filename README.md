@@ -16,6 +16,10 @@ tracking job applications, statuses, follow-up dates, and recent activity.
 - Gmail import activity logging without storing full email bodies
 - Optional daily Gmail scan with new-candidate email notifications
 - One-click schedule enable, status check, manual test, and disable controls
+- Review-first Gmail status detection for assessments, interviews, offers, and
+  rejections
+- Conservative application matching, stale-review protection, and manual
+  confirmation before any status change
 - Canonical dropdown validation for platform, work type, and status
 - Persistent application IDs that are not reused after deletion
 

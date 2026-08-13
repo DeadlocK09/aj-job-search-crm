@@ -31,6 +31,7 @@ function loadServerContext(overrides = {}) {
     "FollowUps.gs",
     "Gmail.gs",
     "GmailScheduler.gs",
+    "StatusUpdates.gs",
     "Main.gs",
     "Search.gs",
     "UI.gs"
@@ -184,6 +185,7 @@ test("browser-side scripts parse and the Add form has a submit guard", () => {
     "AddApplication.html",
     "EditApplicationSidebar.html",
     "GmailImportSidebar.html",
+    "GmailStatusUpdateSidebar.html",
     "SearchSidebar.html"
   ];
 
@@ -230,6 +232,15 @@ test("browser-side scripts parse and the Add form has a submit guard", () => {
   assert.match(gmailReview, /checkbox\.checked = false/);
   assert.match(gmailReview, /window\.confirm/);
   assert.match(gmailReview, /Nothing is imported automatically/);
+
+  const gmailStatusReview = fs.readFileSync(
+    path.join(sourceRoot, "GmailStatusUpdateSidebar.html"),
+    "utf8"
+  );
+
+  assert.match(gmailStatusReview, /checkbox\.checked = false/);
+  assert.match(gmailStatusReview, /window\.confirm/);
+  assert.match(gmailStatusReview, /Nothing is updated automatically/);
 });
 
 test("the Apps Script manifest uses the Manila timezone", () => {
@@ -576,6 +587,7 @@ test("opening the spreadsheet adds the due count and shows one toast", () => {
   context.onOpen();
 
   assert.ok(menuLabels.includes("🔔 Follow-ups Due (1)"));
+  assert.ok(menuLabels.includes("📨 Review Gmail Status Updates"));
   assert.equal(toasts.length, 1);
   assert.match(toasts[0].message, /1 due today/);
   assert.equal(toasts[0].duration, 8);
@@ -874,4 +886,304 @@ test("scheduled execution reopens the remembered spreadsheet", () => {
     rememberedSpreadsheet
   );
   assert.equal(openedSpreadsheetId, "spreadsheet-remembered");
+});
+
+test("Gmail status parser classifies supported hiring updates", () => {
+  const context = loadServerContext();
+  const examples = [
+    {
+      body: "We invite you to complete an assessment for the Support Analyst role.",
+      status: "Assessment"
+    },
+    {
+      body: "This is an interview invitation for the IT Administrator position.",
+      status: "Interview"
+    },
+    {
+      body: "We are pleased to offer you the Service Desk Analyst position.",
+      status: "Offer"
+    },
+    {
+      body: "We regret to inform you that we have selected other candidates.",
+      status: "Rejected"
+    }
+  ];
+
+  examples.forEach((example, index) => {
+    const parsed = context.parseGmailStatusUpdateEmail_({
+      messageId: "status-message-" + index,
+      subject: "Application update from Acme Corporation",
+      from: "Acme Careers <jobs@acme.example>",
+      body: example.body
+    });
+
+    assert.ok(parsed);
+    assert.equal(parsed.proposedStatus, example.status);
+    assert.ok(parsed.confidence >= 90);
+  });
+
+  const alert = context.parseGmailStatusUpdateEmail_({
+    subject: "Job alert: interview roles you may like",
+    from: "Job Board <alerts@example.com>",
+    body: "Recommended jobs and interview preparation resources."
+  });
+
+  assert.equal(alert, null);
+});
+
+test("Gmail status scan matches safely and excludes unsafe messages", () => {
+  const rows = [
+    [
+      "APP-000001", new Date(), "Acme Corporation",
+      "IT Support Specialist", "LinkedIn", "", "Remote", "", "Applied"
+    ],
+    [
+      "APP-000002", new Date(), "Beta Corp",
+      "Service Desk Analyst", "Indeed", "", "Remote", "", "Applied"
+    ],
+    [
+      "APP-000003", new Date(), "Gamma Ltd",
+      "Systems Analyst", "Other", "", "Hybrid", "", "Assessment"
+    ]
+  ];
+  const sheet = {
+    getLastRow() {
+      return rows.length + 1;
+    },
+    getRange() {
+      return {
+        getValues() {
+          return rows;
+        }
+      };
+    }
+  };
+
+  function createStatusMessage(id, subject, body, hour) {
+    return {
+      getId() {
+        return id;
+      },
+      getDate() {
+        return new Date(2026, 7, 8, hour, 0, 0);
+      },
+      getSubject() {
+        return subject;
+      },
+      getFrom() {
+        return "Careers <jobs@example.com>";
+      },
+      getPlainBody() {
+        return body;
+      }
+    };
+  }
+
+  const messages = [
+    createStatusMessage(
+      "processed-message",
+      "Interview invitation for IT Support Specialist at Acme Corporation",
+      "We invite you to interview.",
+      12
+    ),
+    createStatusMessage(
+      "matched-message",
+      "Interview invitation for Service Desk Analyst at Beta Corp",
+      "We invite you to interview for the Service Desk Analyst position at Beta Corp.",
+      11
+    ),
+    createStatusMessage(
+      "unknown-message",
+      "Job offer for Network Engineer at Unknown Company",
+      "We are pleased to offer you the Network Engineer position.",
+      10
+    ),
+    createStatusMessage(
+      "unchanged-message",
+      "Assessment invitation for Systems Analyst at Gamma Ltd",
+      "Complete an online assessment for the Systems Analyst role at Gamma Ltd.",
+      9
+    )
+  ];
+
+  const context = loadServerContext({
+    GmailApp: {
+      search() {
+        return [{
+          getMessages() {
+            return messages;
+          }
+        }];
+      }
+    }
+  });
+
+  context.getApplicationsSheet = () => sheet;
+  context.getProcessedGmailStatusMessageIds_ = () => ({
+    "processed-message": true
+  });
+
+  const result = context.scanGmailForStatusUpdateCandidates();
+
+  assert.equal(result.summary.messagesReviewed, 4);
+  assert.equal(result.summary.alreadyProcessed, 1);
+  assert.equal(result.summary.unmatched, 1);
+  assert.equal(result.summary.unchangedOrUnsafe, 1);
+  assert.equal(result.summary.candidatesFound, 1);
+  assert.equal(result.candidates[0].messageId, "matched-message");
+  assert.equal(result.candidates[0].applicationId, "APP-000002");
+  assert.equal(result.candidates[0].currentStatus, "Applied");
+  assert.equal(result.candidates[0].proposedStatus, "Interview");
+  assert.equal(result.candidates[0].matchConfidence, 100);
+});
+
+test("confirmed Gmail status review updates only status and timestamp", () => {
+  const rows = [[
+    "APP-000007", new Date(), "Yempo Solutions", "IT Support Engineer",
+    "LinkedIn", "", "Remote", "", "Applied", "", "", "", "", "",
+    "No", "Existing notes", new Date("2026-08-07T00:00:00Z")
+  ]];
+  const writes = [];
+  const logEvents = [];
+  let dashboardUpdates = 0;
+  let lockDepth = 0;
+  const sheet = {
+    getLastRow() {
+      return rows.length + 1;
+    },
+    getRange(row, column, numberOfRows, numberOfColumns) {
+      if (numberOfRows && numberOfColumns) {
+        return {
+          getValues() {
+            return rows.map((value) => value.slice(0, numberOfColumns));
+          }
+        };
+      }
+
+      return {
+        setValue(value) {
+          rows[row - 2][column - 1] = value;
+          writes.push({ row, column, value });
+        }
+      };
+    }
+  };
+  const context = loadServerContext({
+    LockService: {
+      getScriptLock() {
+        return {
+          waitLock() {
+            lockDepth++;
+          },
+          releaseLock() {
+            lockDepth--;
+          }
+        };
+      }
+    }
+  });
+
+  context.getApplicationsSheet = () => sheet;
+  context.getProcessedGmailStatusMessageIds_ = () => ({});
+  context.getCurrentTimestamp = () =>
+    new Date("2026-08-08T04:00:00.000Z");
+  context.logGmailEvent_ = (event) => {
+    logEvents.push(event);
+  };
+  context.updateDashboard = () => {
+    dashboardUpdates++;
+  };
+
+  const result = context.applyGmailStatusUpdateCandidates([{
+    messageId: "status-message-yempo",
+    applicationId: "APP-000007",
+    currentStatus: "Applied",
+    proposedStatus: "Assessment"
+  }]);
+
+  assert.equal(result.updated.length, 1);
+  assert.equal(rows[0][8], "Assessment");
+  assert.equal(rows[0][15], "Existing notes");
+  assert.deepEqual(writes.map((write) => write.column), [9, 17]);
+  assert.equal(dashboardUpdates, 1);
+  assert.equal(logEvents.length, 1);
+  assert.equal(logEvents[0].action, "GMAIL_STATUS_UPDATED");
+  assert.match(logEvents[0].details, /Applied to Assessment/);
+  assert.equal(lockDepth, 0);
+});
+
+test("Gmail status review blocks duplicate, stale, and closed changes", () => {
+  const rows = [
+    [
+      "APP-000001", new Date(), "Acme", "Support", "Other", "", "Remote",
+      "", "Interview"
+    ],
+    [
+      "APP-000002", new Date(), "Beta", "Admin", "Other", "", "Remote",
+      "", "Accepted"
+    ]
+  ];
+  let writes = 0;
+  const sheet = {
+    getLastRow() {
+      return rows.length + 1;
+    },
+    getRange(row, column, numberOfRows, numberOfColumns) {
+      if (numberOfRows && numberOfColumns) {
+        return {
+          getValues() {
+            return rows;
+          }
+        };
+      }
+
+      return {
+        setValue() {
+          writes++;
+        }
+      };
+    }
+  };
+  const context = loadServerContext({
+    LockService: {
+      getScriptLock() {
+        return {
+          waitLock() {},
+          releaseLock() {}
+        };
+      }
+    }
+  });
+
+  context.getApplicationsSheet = () => sheet;
+  context.getProcessedGmailStatusMessageIds_ = () => ({
+    "duplicate-message": true
+  });
+  context.updateDashboard = () => {};
+
+  const result = context.applyGmailStatusUpdateCandidates([
+    {
+      messageId: "duplicate-message",
+      applicationId: "APP-000001",
+      currentStatus: "Interview",
+      proposedStatus: "Technical Interview"
+    },
+    {
+      messageId: "stale-message",
+      applicationId: "APP-000001",
+      currentStatus: "Applied",
+      proposedStatus: "Offer"
+    },
+    {
+      messageId: "closed-message",
+      applicationId: "APP-000002",
+      currentStatus: "Accepted",
+      proposedStatus: "Rejected"
+    }
+  ]);
+
+  assert.equal(result.duplicates.length, 1);
+  assert.equal(result.errors.length, 2);
+  assert.equal(result.updated.length, 0);
+  assert.equal(writes, 0);
 });

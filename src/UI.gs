@@ -42,6 +42,18 @@ function showGmailImportSidebar() {
 }
 
 /**
+ * Opens the review-first Gmail status update sidebar.
+ * Scanning never changes Gmail or an application status.
+ */
+function showGmailStatusUpdateSidebar() {
+  const html = HtmlService
+    .createHtmlOutputFromFile("GmailStatusUpdateSidebar")
+    .setTitle("Review Gmail Status Updates");
+
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
  * Confirms and installs the optional daily Gmail scan.
  */
 function enableScheduledGmailScanFromMenu() {

@@ -66,6 +66,25 @@ function logGmailEvent_(event) {
  * @returns {Object<string, boolean>}
  */
 function getImportedGmailMessageIds_() {
+  return getGmailMessageIdsForActions_(["GMAIL_IMPORTED"]);
+}
+
+/**
+ * Returns Gmail message IDs already used for a confirmed status update.
+ *
+ * @returns {Object<string, boolean>}
+ */
+function getProcessedGmailStatusMessageIds_() {
+  return getGmailMessageIdsForActions_(["GMAIL_STATUS_UPDATED"]);
+}
+
+/**
+ * Returns Gmail message IDs logged with one of the supplied actions.
+ *
+ * @param {Array<string>} actions
+ * @returns {Object<string, boolean>}
+ */
+function getGmailMessageIdsForActions_(actions) {
   const sheet = getCareerFlowSpreadsheet_()
     .getSheetByName(CONFIG.SHEETS.LOGS);
 
@@ -74,10 +93,15 @@ function getImportedGmailMessageIds_() {
   }
 
   const lastRow = sheet.getLastRow();
-  const importedIds = {};
+  const messageIds = {};
+  const allowedActions = {};
+
+  (actions || []).forEach(function (action) {
+    allowedActions[String(action || "").trim()] = true;
+  });
 
   if (lastRow < 2) {
-    return importedIds;
+    return messageIds;
   }
 
   const rows = sheet
@@ -88,10 +112,10 @@ function getImportedGmailMessageIds_() {
     const action = String(row[0] || "").trim();
     const messageId = String(row[1] || "").trim();
 
-    if (action === "GMAIL_IMPORTED" && messageId) {
-      importedIds[messageId] = true;
+    if (allowedActions[action] && messageId) {
+      messageIds[messageId] = true;
     }
   });
 
-  return importedIds;
+  return messageIds;
 }
